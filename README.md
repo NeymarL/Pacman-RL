@@ -29,8 +29,8 @@ For now, just run `python main.py`. The training procedure will start using Mont
 
 
 ## TODO
-* TD(0) control
-* TD(ƛ) control
+* Sarsa(0)
+* Sarsa(ƛ)
 * Q-learning (or DQN)
 * Monte-Carlo policy gradient (REINFORCE)
 * Actor-Critic policy gradient
