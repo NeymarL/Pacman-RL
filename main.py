@@ -13,7 +13,7 @@ def main():
     plt.ion()
     env = gym.make('MsPacman-ram-v0')
     controller = MonteCarloControl(env)
-    episodes = 2001
+    episodes = 5001
     batch_size = 50
     weight_path = 'mc.h5'
     if os.path.exists(weight_path):
@@ -42,7 +42,7 @@ def main():
         endtime = time()
         print(f"Episode {i} Observation Finished, {(endtime - starttime):.2f}s")
         starttime = time()
-        controller.update_q_value_on_batch_multithreads(batch_history, batch_rewards)
+        controller.update_q_value_on_batch(batch_history, batch_rewards)
         endtime = time()
         print(f"Episode {i} Learning Finished, {(endtime - starttime):.2f}s")
 
@@ -94,8 +94,9 @@ def test(env, controller, i):
         if len(qvalues) > 1000:
             axes.set_xlim(0, len(qvalues) + 10)
         plt.draw()
-        plt.pause(1e-17)
+        # plt.pause(1e-17)
     plt.savefig(f"graph/mc/Ep{i}_Q.png")
+    print(f"Save qvalue graph to graph/mc/Ep{i}_Q.png")
     plt.close('all')
     print(f"Episode {i} Game ended! Total reward: {total_reward}")
     return total_reward

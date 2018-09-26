@@ -55,15 +55,27 @@ class MonteCarloControl:
         '''
         x = None
         y = None
+        N = defaultdict(int)
+        Q = defaultdict(float)
         for i, (history, rewards) in enumerate(zip(batch_history, batch_rewards)):
-            inputs, targets = self.build_training_set(history, rewards)
-            if i == 0:
-                x = inputs
-                y = targets
-            else:
-                x = np.concatenate((x, inputs), axis=0)
-                y = np.concatenate((y, targets), axis=0)
-        self.model.train_on_batch(x, y)
+            for i, ((s, a), r) in enumerate(zip(history, rewards)):
+                s = tuple(s)
+                N[(s, a)] += 1
+                G = self.compute_return(rewards, i)
+                Q[(s, a)] += (G - Q[(s, a)]) / N[(s, a)]    # track the mean return
+
+        data = defaultdict(list)
+        for (s, a), q in Q.items():
+            data[s].append((a, q))
+
+        inputs = np.zeros((len(data), ) + self.env.observation_space.shape)
+        targets = np.zeros((len(data), self.env.action_space.n))
+        for i, (s, item) in enumerate(data.items()):
+            inputs[i] = np.array(s)
+            targets[i] = self.model.predict(np.expand_dims(inputs[i], axis=0))
+            for a, q in item:
+                targets[i, a] = q
+        self.model.train_on_batch(inputs, targets)
 
     def update_q_value_on_batch_multithreads(self, batch_history, batch_rewards):
         '''
