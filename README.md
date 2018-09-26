@@ -19,6 +19,8 @@ For now, just run `python main.py`. The training procedure will start using Mont
 
 ### Monte-Carlo Control
 
+![](http://latex.codecogs.com/gif.latex?\\frac{\\partial J}{\\partial \\theta_k^{(j)}}=\\sum_{i:r(i,j)=1}{\\big((\\theta^{(j)})^Tx^{(i)}-y^{(i,j)}\\big)x_k^{(i)}}+\\lambda \\xtheta_k^{(j)})
+
 * Policy evaluation
     ![](http://latex.codecogs.com/gif.latex?Q(s_t,a_t)\\leftarrow Q(s_t, a_t) + \\frac{1}{N(s_t, a_t)}(G_t - Q(s_t, a_t)))
     $$Q(s_t, a_t) \leftarrow Q(s_t, a_t) + \frac{1}{N(s_t, a_t)}(G_t - Q(s_t, a_t))$$
