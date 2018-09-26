@@ -1,5 +1,4 @@
 # Pacman-RL
-<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
 
 Implement some classic reinforcement learning algorithms, test and visualize on Pacman under [OpenAI's Gym](https://gym.openai.com/) environment.
 
@@ -21,6 +20,7 @@ For now, just run `python main.py`. The training procedure will start using Mont
 ### Monte-Carlo Control
 
 * Policy evaluation
+    ![](http://latex.codecogs.com/gif.latex?Q(s_t,a_t)\\leftarrow Q(s_t, a_t) + \\frac{1}{N(s_t, a_t)}(G_t - Q(s_t, a_t)))
     $$Q(s_t, a_t) \leftarrow Q(s_t, a_t) + \frac{1}{N(s_t, a_t)}(G_t - Q(s_t, a_t))$$
     $$G_t = R_{t + 1} + \gamma R_{t+2} + ... + \gamma^{T-1}R_T$$
 * Policy improvement: $\epsilon$-greedy
