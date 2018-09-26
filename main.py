@@ -69,7 +69,7 @@ def test(env, controller, i):
     total_reward = 0
     qvalues = []
     rewards = []
-    plt.show()
+    # plt.show()
 
     axes = plt.gca()
     axes.set_xlim(0, 1000)
@@ -77,7 +77,7 @@ def test(env, controller, i):
     q_plot, = axes.plot([], [], 'r-')
     r_plot, = axes.plot([], [], 'bx')
     while not done:
-        env.render()
+        # env.render()
         state = np.expand_dims(observation, axis=0)
         action, Q = controller.action(state, predict=True, return_q=True)
         observation, reward, done, info = env.step(action)
