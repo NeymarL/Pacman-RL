@@ -2,3 +2,5 @@
 *.h5
 .DS_Store
 graph/mc/*.png
+*.json
+*.mp4

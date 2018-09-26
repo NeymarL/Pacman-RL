@@ -5,12 +5,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from time import time
+from gym.wrappers import Monitor
 from montecarlo import MonteCarloControl
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-
 def main():
-    plt.ion()
     env = gym.make('MsPacman-ram-v0')
     controller = MonteCarloControl(env)
     episodes = 5001
@@ -69,19 +68,18 @@ def test(env, controller, i):
     total_reward = 0
     qvalues = []
     rewards = []
-    # plt.show()
+    plt.show()
 
     axes = plt.gca()
     axes.set_xlim(0, 1000)
-    axes.set_ylim(0, 60)
+    axes.set_ylim(0, 50)
     q_plot, = axes.plot([], [], 'r-')
     r_plot, = axes.plot([], [], 'bx')
     while not done:
-        # env.render()
+        env.render()
         state = np.expand_dims(observation, axis=0)
         action, Q = controller.action(state, predict=True, return_q=True)
         observation, reward, done, info = env.step(action)
-        # print(reward)
         total_reward += reward
         rewards.append(reward)
         qvalues.append(np.max(Q))
@@ -94,12 +92,17 @@ def test(env, controller, i):
         if len(qvalues) > 1000:
             axes.set_xlim(0, len(qvalues) + 10)
         plt.draw()
-        # plt.pause(1e-17)
-    plt.savefig(f"graph/mc/Ep{i}_Q.png")
+        plt.pause(1e-17)
+    # plt.savefig(f"graph/mc/Ep{i}_Q.png")
     print(f"Save qvalue graph to graph/mc/Ep{i}_Q.png")
     plt.close('all')
     print(f"Episode {i} Game ended! Total reward: {total_reward}")
     return total_reward
 
 if __name__ == '__main__':
-    main()
+    # main()
+    env = gym.make('MsPacman-ram-v0')
+    env = Monitor(env, '.', force=True)
+    controller = MonteCarloControl(env)
+    controller.load('mc.h5')
+    test(env, controller, 0)
