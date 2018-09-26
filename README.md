@@ -19,10 +19,9 @@ For now, just run `python main.py`. The training procedure will start using Mont
 
 ### Monte-Carlo Control
 
-![](http://latex.codecogs.com/gif.latex?\\frac{\\partial J}{\\partial \\theta_k^{(j)}}=\\sum_{i:r(i,j)=1}{\\big((\\theta^{(j)})^Tx^{(i)}-y^{(i,j)}\\big)x_k^{(i)}}+\\lambda \\xtheta_k^{(j)})
 
 * Policy evaluation
-    ![](http://latex.codecogs.com/gif.latex?Q(s_t,a_t)\\leftarrow Q(s_t, a_t) + \\frac{1}{N(s_t, a_t)}(G_t - Q(s_t, a_t)))
+    ![](http://latex.codecogs.com/gif.latex?Q%28s_t%2C%20a_t%29%20%5Cleftarrow%20Q%28s_t%2C%20a_t%29%20&plus;%20%5Cfrac%7B1%7D%7BN%28s_t%2C%20a_t%29%7D%28G_t%20-%20Q%28s_t%2C%20a_t%29%29)
     $$Q(s_t, a_t) \leftarrow Q(s_t, a_t) + \frac{1}{N(s_t, a_t)}(G_t - Q(s_t, a_t))$$
     $$G_t = R_{t + 1} + \gamma R_{t+2} + ... + \gamma^{T-1}R_T$$
 * Policy improvement: $\epsilon$-greedy
