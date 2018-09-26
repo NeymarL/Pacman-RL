@@ -85,7 +85,7 @@ def test(env, controller, i):
         total_reward += reward
         rewards.append(reward)
         qvalues.append(np.max(Q))
-        # draw q_value function
+        # draw q_value function and rewards
         x = range(len(qvalues))
         q_plot.set_xdata(x)
         q_plot.set_ydata(qvalues)
@@ -95,7 +95,6 @@ def test(env, controller, i):
             axes.set_xlim(0, len(qvalues) + 10)
         plt.draw()
         plt.pause(1e-17)
-    # todo: draw reward
     plt.savefig(f"graph/mc/Ep{i}_Q.png")
     plt.close('all')
     print(f"Episode {i} Game ended! Total reward: {total_reward}")

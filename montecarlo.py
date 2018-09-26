@@ -1,3 +1,8 @@
+# Monte-Carlo Control with Q-value function approximation
+# Policy evaluation: Q(s, a) <- Q(s, a) + (G - Q(s, a)) / N(s, a)
+# Policy improvement: epsilon-greedy exploration
+# Q-value function approximation: Two-layer perception (input layer and output layer only)
+
 import gym
 import numpy as np
 from collections import defaultdict
