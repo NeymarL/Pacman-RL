@@ -131,8 +131,7 @@ def evaluate(config, env, controller):
         if config.save_plot:
             plt.savefig(f"{config.resource.graph_dir}/Evaluate_ep{i}.png")
             print(f"Total reward = {total_reward} Save sa {config.resource.graph_dir}/Evaluate_ep{i}.png")
-        if config.show_plot:
-            plt.close('all')
+        plt.close('all')
         mean_reward += total_reward
         i += 1
     mean_reward /= config.trainer.evaluate_episodes

@@ -1,0 +1,6 @@
+tensorflow
+keras
+numpy
+matplotlib
+gym
+mujoco_py
