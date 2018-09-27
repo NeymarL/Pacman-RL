@@ -5,24 +5,30 @@
 
 import gym
 import numpy as np
+import tensorflow as tf
+
 from collections import defaultdict
 from keras.models import Sequential
 from keras.layers import Dense, Flatten
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from src.config import Config, ControllerType
+
 class MonteCarloControl:
-    def __init__(self, env, epsilon=0.5, gamma=0.9, max_workers=8):
+    def __init__(self, env, config: Config):
         self.env = env
-        self.epsilon = epsilon
-        self.gamma = gamma
+        self.epsilon = config.controller.epsilon
+        self.gamma = config.controller.gamma
         self.model = self.build_model()
-        self.max_workers = max_workers
+        self.max_workers = config.controller.max_workers
+        self.graph = None
 
     def build_model(self):
         model = Sequential()
         model.add(Dense(self.env.action_space.n, input_shape=self.env.observation_space.shape, 
                              kernel_initializer='uniform', activation='linear'))
         model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
+        self.graph = tf.get_default_graph()
         return model
 
     def action(self, observation, predict=False, return_q=False):
@@ -32,10 +38,11 @@ class MonteCarloControl:
         if np.random.rand() <= self.epsilon and not predict:
             a = self.env.action_space.sample()
         else:
-            Q = self.model.predict(observation)
-            a = np.argmax(Q)
-            if return_q:
-                return (a, Q)
+            with self.graph.as_default():
+                Q = self.model.predict(observation)
+                a = np.argmax(Q)
+                if return_q:
+                    return (a, Q)
         return a
 
     def update_q_value(self, history, rewards):
@@ -131,6 +138,7 @@ class MonteCarloControl:
 
     def load(self, path):
         self.model.load_weights(path)
+        self.graph = tf.get_default_graph()
         print(f"Load weight from {path}")
 
 

@@ -13,7 +13,7 @@ Implement some classic reinforcement learning algorithms, test and visualize on 
 
 ## Run
 
-For now, just run `python main.py`. The training procedure will start using Monte-Carlo controller.
+For now, just run `python run.py train --controller MC`. The training procedure will start using Monte-Carlo controller.
 
 ## Reinforcement Learning Algorithms
 

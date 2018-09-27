@@ -1,0 +1,53 @@
+import argparse
+
+from src.config import Config, ControllerType
+from src.main import main
+
+CMD_LIST = ['train', 'evaluate']
+
+def create_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("cmd", help="what to do", choices=CMD_LIST)
+    parser.add_argument("--controller", help="choose an algorithm (controller)", 
+                        choices=[name for name, m in ControllerType.__members__.items()])
+    parser.add_argument("--render", help="set to render the env when evaluate", action="store_true")
+    parser.add_argument("--save_replay", help="set to save replay", action="store_true")
+    parser.add_argument("--save_plot", help="set to save Q-value plot when evaluate", action="store_true")
+    parser.add_argument("--show_plot", help="set to show Q-value plot when evaluate", action="store_true")
+    parser.add_argument("--num_episodes", help="set to run how many episodes", default=10000, type=int)
+    parser.add_argument("--batch_size", help="set the batch size", default=50, type=int)
+    parser.add_argument("--eva_interval", help="set how many episodes evaluate once", default=200, type=int)
+    parser.add_argument("--evaluate_episodes", help="set evaluate how many episodes", default=10, type=int)
+    parser.add_argument("--checkpoints_interval", help="set how many episodes save the weight once", default=200, type=int)
+    parser.add_argument("--lr", help="set learning rate", default=0.1, type=float)
+    parser.add_argument("--epsilon", help="set epsilon when use epsilon-greedy", default=0.5, type=float)
+    parser.add_argument("--gamma", help="set reward decay rate", default=0.9, type=float)
+    parser.add_argument("--max_workers", help="set max workers to train", default=8, type=int)
+    return parser
+
+def start():
+    parser = create_parser()
+    args = parser.parse_args()
+
+    config = Config(ControllerType[args.controller])
+    if args.cmd == 'train':
+        config.train = True
+        config.evaluate = False
+    else:
+        config.train = False
+        config.evaluate = True
+    config.render = args.render
+    config.save_replay = args.save_replay
+    config.show_plot = args.show_plot
+    config.save_plot = args.save_plot
+    config.trainer.num_episodes = args.num_episodes
+    config.trainer.batch_size = args.batch_size
+    config.trainer.evaluate_interval = args.eva_interval
+    config.trainer.checkpoints_interval = args.checkpoints_interval
+    config.trainer.lr = args.lr
+    config.trainer.evaluate_episodes = args.evaluate_episodes
+    config.controller.epsilon = args.epsilon
+    config.controller.gamma = args.gamma
+    config.controller.max_workers = args.max_workers
+    main(config)
+
