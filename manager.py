@@ -1,8 +1,12 @@
 import argparse
 
-from src.config import Config, ControllerType
-from src.main import main
+from logging import getLogger
 
+from src.main import main
+from src.logger import setup_logger
+from src.config import Config, ControllerType
+
+logger = getLogger(__name__)
 CMD_LIST = ['train', 'evaluate']
 
 def create_parser():
@@ -16,8 +20,8 @@ def create_parser():
     parser.add_argument("--show_plot", help="set to show Q-value plot when evaluate", action="store_true")
     parser.add_argument("--num_episodes", help="set to run how many episodes", default=10000, type=int)
     parser.add_argument("--batch_size", help="set the batch size", default=50, type=int)
-    parser.add_argument("--eva_interval", help="set how many episodes evaluate once", default=200, type=int)
-    parser.add_argument("--evaluate_episodes", help="set evaluate how many episodes", default=10, type=int)
+    parser.add_argument("--eva_interval", help="set how many episodes evaluate once", default=500, type=int)
+    parser.add_argument("--evaluate_episodes", help="set evaluate how many episodes", default=100, type=int)
     parser.add_argument("--checkpoints_interval", help="set how many episodes save the weight once", default=200, type=int)
     parser.add_argument("--lr", help="set learning rate", default=0.1, type=float)
     parser.add_argument("--epsilon", help="set epsilon when use epsilon-greedy", default=0.5, type=float)
@@ -30,6 +34,7 @@ def start():
     args = parser.parse_args()
 
     config = Config(ControllerType[args.controller])
+
     if args.cmd == 'train':
         config.train = True
         config.evaluate = False

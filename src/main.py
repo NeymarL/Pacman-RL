@@ -5,11 +5,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from time import time
+from logging import getLogger
 from gym.wrappers import Monitor
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from src.montecarlo import MonteCarloControl
+from src.sarsa import SarsaControl
 from src.config import Config, ControllerType
+
+logger = getLogger(__name__)
 
 def main(config: Config):
     env = gym.make('MsPacman-ram-v0')
@@ -18,12 +22,16 @@ def main(config: Config):
 
     if config.controller.controller_type == ControllerType.MC:
         controller = MonteCarloControl(env, config)
+    elif config.controller.controller_type == ControllerType.Sarsa:
+        controller = SarsaControl(env, config)
     else:
         raise NotImplementedError
     
     weight_path = config.resource.weight_path
     if os.path.exists(weight_path):
         controller.load(weight_path)
+    else:
+        controller.save(weight_path)
 
     if config.train:
         train(config, env, controller)
@@ -40,6 +48,14 @@ def train(config, env, controller):
     indexes = []
     i = 0
     while i < episodes:
+        if i % config.trainer.evaluate_interval == 0:
+            current_reward = evaluate(config, env, controller)
+            if i % config.trainer.checkpoints_interval == 0 and len(total_rewards) > 0 and\
+                (current_reward > max(total_rewards)):
+                controller.save(config.resource.weight_path)
+            total_rewards.append(current_reward)
+            indexes.append(i)
+
         starttime = time()
         batch_history = []
         batch_rewards = []
@@ -53,22 +69,15 @@ def train(config, env, controller):
                 batch_rewards.append(rewards)
         i += batch_size
         endtime = time()
-        print(f"Episode {i} Observation Finished, {(endtime - starttime):.2f}s")
+        logger.info(f"Episode {i} Observation Finished, {(endtime - starttime):.2f}s")
         starttime = time()
         controller.update_q_value_on_batch(batch_history, batch_rewards)
         endtime = time()
-        print(f"Episode {i} Learning Finished, {(endtime - starttime):.2f}s")
-
-        if i % config.trainer.checkpoints_interval == 0:
-            controller.save(config.resource.weight_path)
-
-        if i % config.trainer.evaluate_interval == 0:
-            total_rewards.append(evaluate(config, env, controller))
-            indexes.append(i)
+        logger.info(f"Episode {i} Learning Finished, {(endtime - starttime):.2f}s")
 
     plt.plot(indexes, total_rewards, 'g-')
     plt.savefig(f"{config.resource.graph_dir}/learn_curve.png")
-    print(f"Learning curve saved as {config.resource.graph_dir}/learn_curve.png")
+    logger.info(f"Learning curve saved as {config.resource.graph_dir}/learn_curve.png")
 
 def simulation(env, controller):
     done = False
@@ -84,7 +93,7 @@ def simulation(env, controller):
     return (history, rewards)
 
 def evaluate(config, env, controller):
-    print("Evaluating...")
+    logger.info("Evaluating...")
     mean_reward = 0
     i = 0
     while i < config.trainer.evaluate_episodes:
@@ -130,11 +139,13 @@ def evaluate(config, env, controller):
                 plt.pause(1e-17)
         if config.save_plot:
             plt.savefig(f"{config.resource.graph_dir}/Evaluate_ep{i}.png")
-            print(f"Total reward = {total_reward} Save sa {config.resource.graph_dir}/Evaluate_ep{i}.png")
+            logger.info(f"Total reward = {total_reward} Save sa {config.resource.graph_dir}/Evaluate_ep{i}.png")
+        elif config.show_plot:
+            logger.info(f"Total reward = {total_reward}")
         plt.close('all')
         mean_reward += total_reward
         i += 1
     mean_reward /= config.trainer.evaluate_episodes
-    print(f"Mean reward = {mean_reward}")
+    logger.info(f"Mean reward = {mean_reward}")
     return mean_reward
 

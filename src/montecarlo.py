@@ -7,29 +7,25 @@ import gym
 import numpy as np
 import tensorflow as tf
 
+from logging import getLogger
 from collections import defaultdict
 from keras.models import Sequential
 from keras.layers import Dense, Flatten
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from src.base import BaseController
 from src.config import Config, ControllerType
 
-class MonteCarloControl:
+logger = getLogger(__name__)
+
+class MonteCarloControl(BaseController):
     def __init__(self, env, config: Config):
+        super().__init__()
         self.env = env
         self.epsilon = config.controller.epsilon
         self.gamma = config.controller.gamma
         self.model = self.build_model()
         self.max_workers = config.controller.max_workers
-        self.graph = None
-
-    def build_model(self):
-        model = Sequential()
-        model.add(Dense(self.env.action_space.n, input_shape=self.env.observation_space.shape, 
-                             kernel_initializer='uniform', activation='linear'))
-        model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
-        self.graph = tf.get_default_graph()
-        return model
 
     def action(self, observation, predict=False, return_q=False):
         '''
@@ -131,15 +127,6 @@ class MonteCarloControl:
         for j in range(i, len(rewards)):
             G += (self.gamma ** j) * rewards[j]
         return G
-
-    def save(self, path):
-        self.model.save_weights(path)
-        print(f"Save weight to {path}")
-
-    def load(self, path):
-        self.model.load_weights(path)
-        self.graph = tf.get_default_graph()
-        print(f"Load weight from {path}")
 
 
 

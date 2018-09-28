@@ -1,5 +1,9 @@
 import os
+
 from enum import Enum
+from logging import getLogger
+
+logger = getLogger(__name__)
 
 def _project_dir():
     d = os.path.dirname
@@ -31,14 +35,22 @@ class Config:
         self.resource.set_path(controller_type)
         self.resource.create_directories()
 
+    def __setattr__(self, name, value):
+        self.__dict__[name] = value
+        logger.info(f"Config.{name} = {value}")
+
 class TrainerConfig:
     def __init__(self):
         self.num_episodes = 10000
         self.batch_size = 50
-        self.evaluate_interval = 200
+        self.evaluate_interval = 500
         self.checkpoints_interval = 200
         self.lr = 0.1
-        self.evaluate_episodes = 10
+        self.evaluate_episodes = 100
+
+    def __setattr__(self, name, value):
+        self.__dict__[name] = value
+        logger.info(f"TrainerConfig.{name} = {value}")
 
 class ControllerConfig:
     def __init__(self, controller_type):
@@ -47,12 +59,17 @@ class ControllerConfig:
         self.gamma = 0.9
         self.max_workers = 8
 
+    def __setattr__(self, name, value):
+        self.__dict__[name] = value
+        logger.info(f"ControllerConfig.{name} = {value}")
+
 class ResourceConfig:
     def __init__(self):
         self.project_dir = _project_dir()
         self.weight_dir = os.path.join(self.project_dir, 'weights')
         self.graph_dir = os.path.join(self.project_dir, 'graph')
         self.replay_dir = os.path.join(self.project_dir, 'video')
+        self.log_path = os.path.join(self.project_dir, 'main.log')
 
     def set_path(self, controller_type):
         self.weight_path = os.path.join(self.weight_dir, controller_type.name.lower() + '.h5')
