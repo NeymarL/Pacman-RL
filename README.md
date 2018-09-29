@@ -14,7 +14,8 @@ Implement some classic reinforcement learning algorithms, test and visualize on 
 
 ## Run
 
-For now, just run `python run.py train --controller MC`. The training procedure will start using Monte-Carlo controller.
+* Run `python run.py --controller MC train` for training using Monte-Carlo control. The weight file will be saved as `weights/mc.h5`.
+* Run `python run.py --controller MC --render --show_plot --evaluate_episodes 10 evaluate` for evaluation using Monte-Carlo control. It will render the Pacman environment and show the dynamic Q-value and reward plot at the same time.
 
 ```
 Full usage: run.py [-h] [--controller {MC,Sarsa,Sarsa_lambda,Q_learning}]
@@ -58,7 +59,6 @@ optional arguments:
 
 ### Monte-Carlo Control
 
-
 * Policy evaluation
     * ![](http://latex.codecogs.com/gif.latex?Q%28s_t%2C%20a_t%29%20%5Cleftarrow%20Q%28s_t%2C%20a_t%29%20&plus;%20%5Cfrac%7B1%7D%7BN%28s_t%2C%20a_t%29%7D%28G_t%20-%20Q%28s_t%2C%20a_t%29%29)
     * ![](http://latex.codecogs.com/gif.latex?G_t%20%3D%20R_%7Bt%20&plus;%201%7D%20&plus;%20%5Cgamma%20R_%7Bt&plus;2%7D%20&plus;%20...%20&plus;%20%5Cgamma%5E%7BT-1%7DR_T)
@@ -66,9 +66,15 @@ optional arguments:
 * Policy improvement: 𝜀-greedy
 * Q-value function approximation: 2-layer fully connected layer (input layer and output layer with no hidden layer)
 
+### Sarsa(0)
+
+* Policy evaluation
+    * ![](http://latex.codecogs.com/gif.latex?Q%28s%2Ca%29%5Cleftarrow%20Q%28s%2Ca%29&plus;%5Calpha%28R&plus;%5Cgamma%20Q%28s%27%2Ca%27%29-Q%28s%2Ca%29%29)
+* Policy improvement: 𝜀-greedy
+* Q-value function approximation: 2-layer fully connected layer (input layer and output layer with no hidden layer)
+
 
 ## TODO
-* Sarsa(0)
 * Sarsa(ƛ)
 * Q-learning (or DQN)
 * Monte-Carlo policy gradient (REINFORCE)
