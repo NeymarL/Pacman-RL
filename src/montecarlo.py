@@ -31,30 +31,28 @@ class MonteCarloControl(BaseController):
         '''
         epsilon-greedy policy
         '''
-        if np.random.rand() <= self.epsilon and not predict:
-            a = self.env.action_space.sample()
-        else:
-            with self.graph.as_default():
-                Q = self.model.predict(observation)
-                a = np.argmax(Q)
-                if return_q:
-                    return (a, Q)
-        return a
+        return self.epsilon_greedy_action(observation, predict, return_q)
 
     def update_q_value(self, history, rewards):
-        '''
-        Monte-Carlo evaluation
-        history = [(s1, a1), (s2, a2), ...,(sT-1, aT-1)]
-        rewards = [r2, r3, ..., rT]
+        '''Monte-Carlo evaluation on single episode
+
+        Q(s, a) <- Q(s, a) + (G - Q(s, a)) / N(s, a)
+
+        Args:
+            history = [(s1, a1), (s2, a2), ...,(sT-1, aT-1)]
+            rewards = [r2, r3, ..., rT]
         '''
         inputs, targets = self.build_training_set(history, rewards)
         self.model.train_on_batch(inputs, targets)
 
     def update_q_value_on_batch(self, batch_history, batch_rewards):
-        '''
-        Monte-Carlo evaluation
-        batch_history = [[(s1, a1), (s2, a2), ...,(sT-1, aT-1)], ...]
-        batch_rewards = [[r2, r3, ..., rT], ...]
+        '''Monte-Carlo evaluation on batch
+        
+        Q(s, a) <- Q(s, a) + (G - Q(s, a)) / N(s, a)
+
+        Args:
+            batch_history = [[(s1, a1), (s2, a2), ...,(sT-1, aT-1)], ...]
+            batch_rewards = [[r2, r3, ..., rT], ...]
         '''
         x = None
         y = None
@@ -81,10 +79,13 @@ class MonteCarloControl(BaseController):
         self.model.train_on_batch(inputs, targets)
 
     def update_q_value_on_batch_multithreads(self, batch_history, batch_rewards):
-        '''
-        Monte-Carlo evaluation
-        batch_history = [[(s1, a1), (s2, a2), ...,(sT-1, aT-1)], ...]
-        batch_rewards = [[r2, r3, ..., rT], ...]
+        '''Multithread Monte-Carlo evaluation on batch
+        
+        Q(s, a) <- Q(s, a) + (G - Q(s, a)) / N(s, a)
+
+        Args:
+            batch_history = [[(s1, a1), (s2, a2), ...,(sT-1, aT-1)], ...]
+            batch_rewards = [[r2, r3, ..., rT], ...]
         '''
         x = None
         y = None
@@ -127,6 +128,3 @@ class MonteCarloControl(BaseController):
         for j in range(i, len(rewards)):
             G += (self.gamma ** j) * rewards[j]
         return G
-
-
-

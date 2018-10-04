@@ -17,6 +17,7 @@ logger = getLogger(__name__)
 class BaseController:
     def __init__(self):
         self.model = None
+        self.epsilon = 0
 
     def build_model(self):
         model = Sequential()
@@ -25,6 +26,29 @@ class BaseController:
         model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
         self.graph = tf.get_default_graph()
         return model
+
+    def epsilon_greedy_action(self, observation, predict=False, return_q=False):
+        '''epsilon-greedy policy
+
+        Choose an action according to epsilon-greedy policy.
+
+        Args:
+            observation: An observation from the environment
+            predict: Boolean value. Set true to become greedy policy (no random action)
+            retuen_q: Boolean value. Set true to return the action as well as the original Q-value
+
+        Return:
+            The action choosed according to epsilon-greedy policy
+        '''
+        if np.random.rand() <= self.epsilon and not predict:
+            a = self.env.action_space.sample()
+        else:
+            with self.graph.as_default():
+                Q = self.model.predict(observation)
+                a = np.argmax(Q)
+                if return_q:
+                    return (a, Q)
+        return a
 
     def save(self, path):
         self.model.save_weights(path)

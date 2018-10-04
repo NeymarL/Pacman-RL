@@ -31,21 +31,16 @@ class SarsaControl(BaseController):
         '''
         epsilon-greedy policy
         '''
-        if np.random.rand() <= self.epsilon and not predict:
-            a = self.env.action_space.sample()
-        else:
-            with self.graph.as_default():
-                Q = self.model.predict(observation)
-                a = np.argmax(Q)
-                if return_q:
-                    return (a, Q)
-        return a
+        return self.epsilon_greedy_action(observation, predict, return_q)
 
     def update_q_value_on_batch(self, batch_history, batch_rewards):
-        '''
-        Sarsa evaluation
-        batch_history = [[(s1, a1), (s2, a2), ...,(sT-1, aT-1)], ...]
-        batch_rewards = [[r2, r3, ..., rT], ...]
+        '''Sarsa evaluation
+
+        Q(s, a) <- Q(s, a) + alpha * (R + gamma * Q(s', a') - Q(s, a))
+
+        Args:
+            batch_history = [[(s1, a1), (s2, a2), ...,(sT-1, aT-1)], ...]
+            batch_rewards = [[r2, r3, ..., rT], ...]
         '''
         x = None
         y = None
