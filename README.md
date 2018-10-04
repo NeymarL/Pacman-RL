@@ -22,9 +22,9 @@ Full usage: run.py [-h] [--controller {MC,Sarsa,Sarsa_lambda,Q_learning}]
               [--render] [--save_replay] [--save_plot] [--show_plot]
               [--num_episodes NUM_EPISODES] [--batch_size BATCH_SIZE]
               [--eva_interval EVA_INTERVAL]
-              [--evaluate_episodes EVALUATE_EPISODES]
-              [--checkpoints_interval CHECKPOINTS_INTERVAL] [--lr LR]
-              [--epsilon EPSILON] [--gamma GAMMA] [--max_workers MAX_WORKERS]
+              [--evaluate_episodes EVALUATE_EPISODES] [--lr LR]
+              [--epsilon EPSILON] [--gamma GAMMA] [--lam LAM]
+              [--max_workers MAX_WORKERS]
               {train,evaluate}
 
 positional arguments:
@@ -46,11 +46,10 @@ optional arguments:
                         set how many episodes evaluate once
   --evaluate_episodes EVALUATE_EPISODES
                         set evaluate how many episodes
-  --checkpoints_interval CHECKPOINTS_INTERVAL
-                        set how many episodes save the weight once
   --lr LR               set learning rate
   --epsilon EPSILON     set epsilon when use epsilon-greedy
   --gamma GAMMA         set reward decay rate
+  --lam LAM             set lambda if use sarsa(lambda) algorithm
   --max_workers MAX_WORKERS
                         set max workers to train
 ```
@@ -73,10 +72,16 @@ optional arguments:
 * Policy improvement: 𝜀-greedy
 * Q-value function approximation: 2-layer fully connected layer (input layer and output layer with no hidden layer)
 
+### Sarsa(𝝀)
+
+* Policy evaluation
+    * ![](http://latex.codecogs.com/gif.latex?Q%28s%2C%20a%29%20%5Cleftarrow%20Q%28s%2C%20a%29%20&plus;%20%5Calpha%28q_t%5E%5Clambda-Q%28s%2Ca%29%29)
+    * ![](http://latex.codecogs.com/gif.latex?q_t%5E%5Clambda%3D%281-%5Clambda%29%5Csum_%7Bn%3D1%7D%5E%5Cinfty%20%5Clambda%5E%7Bn-1%7Dq_t%5E%7B%28n%29%7D)
+    * ![](http://latex.codecogs.com/gif.latex?q_t%5E%7B%28n%29%7D%3DR_%7Bt&plus;1%7D%20&plus;%20%5Cgamma%20R_%7Bt&plus;2%7D%20&plus;%20...%20&plus;%20%5Cgamma%5E%7Bn-1%7D%20R_%7Bt&plus;n%7D&plus;%5Cgamma%5En%20Q%28s_%7Bt&plus;n%7D%2C%20a_%7Bt&plus;n%7D%29)
+* Policy improvement: 𝜀-greedy
+* Q-value function approximation: 2-layer fully connected layer (input layer and output layer with no hidden layer)
 
 ## TODO
-* Sarsa(ƛ)
-* Q-learning (or DQN)
+* Q-learning
 * Monte-Carlo policy gradient (REINFORCE)
 * Actor-Critic policy gradient
-
