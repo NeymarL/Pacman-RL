@@ -26,6 +26,7 @@ def create_parser():
     parser.add_argument("--epsilon", help="set epsilon when use epsilon-greedy", default=0.5, type=float)
     parser.add_argument("--gamma", help="set reward decay rate", default=0.9, type=float)
     parser.add_argument("--lam", help="set lambda if use sarsa(lambda) algorithm", default=0.5, type=float)
+    parser.add_argument("--forward", help="set to use forward-view sarsa(lambda)", action="store_true")
     parser.add_argument("--max_workers", help="set max workers to train", default=8, type=int)
     return parser
 
@@ -53,6 +54,6 @@ def start():
     config.controller.epsilon = args.epsilon
     config.controller.gamma = args.gamma
     config.controller.lambda_ = args.lam
+    config.controller.forward = args.forward
     config.controller.max_workers = args.max_workers
     main(config)
-

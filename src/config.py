@@ -58,6 +58,7 @@ class ControllerConfig:
         self.gamma = 0.9
         self.max_workers = 8
         self.lambda_ = 0.5
+        self.forward = False
 
     def __setattr__(self, name, value):
         self.__dict__[name] = value

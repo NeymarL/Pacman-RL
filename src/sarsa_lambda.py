@@ -1,7 +1,13 @@
-# Forward-view Sarsa(𝝀) control with Q-value function approximation
-# Policy evaluation: Q(s, a) <- Q(s, a) + 𝜶 * (q_t_𝝀 - Q(s, a))
-#                    q_t_𝝀 = (1 - 𝝀) * ∑ 𝝀^(n - 1)q_t_n
-#                    q_t_n = R_t+1 + 𝜸R_t+2 + 𝜸^2R_t+3 + ... + 𝜸^(n-1)R_t+n + 𝜸^nQ(s_t+n, a_t+n)
+# Sarsa(𝝀) control with Q-value function approximation
+# Policy evaluation: 
+#   Forward-view:
+#       Q(s, a) <- Q(s, a) + 𝜶 * (q_t_𝝀 - Q(s, a))
+#       q_t_𝝀 = (1 - 𝝀) * ∑ 𝝀^(n - 1)q_t_n
+#       q_t_n = R_t+1 + 𝜸R_t+2 + 𝜸^2R_t+3 + ... + 𝜸^(n-1)R_t+n + 𝜸^n * Q(s_t+n, a_t+n)
+#   Backward-view:
+#       Q(s, a) <- Q(s, a) + 𝜶 * (R + 𝜸Q(s', a') - Q(s, a))E_t(s, a)
+#       E_0(s, a) = 0
+#       E_t(s, a) = 𝜸𝝀E_t-1(s, a) + 1(S_t = s, A_t = a)
 # Policy improvement: epsilon-greedy exploration
 # Q-value function approximation: Two-layer perception (input layer and output layer only)
 
@@ -29,6 +35,7 @@ class SarsaLambdaControl(BaseController):
         self.lambda_ = config.controller.lambda_
         self.model = self.build_model()
         self.max_workers = config.controller.max_workers
+        self.forward = config.controller.forward
         
     def action(self, observation, predict=False, return_q=False):
         '''
@@ -37,7 +44,13 @@ class SarsaLambdaControl(BaseController):
         return self.epsilon_greedy_action(observation, predict, return_q)
 
     def build_training_set(self, history, rewards):
-        '''Sarsa(𝝀) evaluation
+        if self.forward:
+            return self.build_training_set_forward(history, rewards)
+        else:
+            return self.build_training_set_backward(history, rewards)
+
+    def build_training_set_forward(self, history, rewards):
+        '''Forward-view Sarsa(𝝀) evaluation
 
         Q(s, a) <- Q(s, a) + 𝜶 * (q_t_𝝀 - Q(s, a))
 
@@ -59,6 +72,61 @@ class SarsaLambdaControl(BaseController):
                 Q[tuple(s)] = self.model.predict(np.expand_dims(inputs[t], axis=0))
             targets[t] = Q[tuple(s)]
             targets[t, a] = self.q_lambda(t, rewards, history, Q)
+        return inputs, targets
+
+    def build_training_set_backward(self, history, rewards):
+        '''Backward-view Sarsa(𝝀) evaluation
+
+        Q(s, a) <- Q(s, a) + 𝜶 * (R + 𝜸Q(s', a') - Q(s, a))E_t(s, a)
+        E_0(s, a) = 0
+        E_t(s, a) = 𝜸𝝀E_t-1(s, a) + 1(S_t = s, A_t = a)
+
+        Args:
+            history = [(s1, a1), (s2, a2), ...,(sT-1, aT-1)]
+            rewards = [r2, r3, ..., rT]
+
+        Return:
+            (inputs, targets): 
+                inputs is a state list; 
+                targets contains lists of action-values for each state in inputs
+        '''
+        Q = dict()              # store Q-value
+        E = defaultdict(int)    # eligibility trace
+        his1 = history.copy()
+        his2 = history
+        del(his2[0])
+        his2.append((0, 0))
+
+        for i, ((s, a), r, (s_, a_)) in enumerate(zip(his1, rewards, his2)):
+            s = tuple(s)
+            E[(s, a)] += 1
+            if s not in Q:
+                Q[s] = self.model.predict(np.expand_dims(np.asarray(s), axis=0))[0]
+            if i + 1 == len(rewards):
+                td_error = r - Q[s][a]
+            else:
+                s_ = tuple(s_)
+                if s_ not in Q:
+                    Q[s_] = self.model.predict(np.expand_dims(np.array(s_), axis=0))[0]
+                td_error = r + self.gamma * Q[s_][a_] - Q[s][a]
+            # update Q and E
+            deletion = []
+            for (s, a), e in E.items():
+                if s not in Q:
+                    Q[s] = self.model.predict(np.expand_dims(np.asarray(s), axis=0))[0]
+                Q[s][a] += td_error * E[(s, a)]
+                E[(s, a)] *= self.lambda_
+                if E[(s, a)] < 0.01:
+                    deletion.append((s, a))
+            # delete small eligibility traces
+            for s, a in deletion:
+                del E[(s, a)]
+
+        inputs = np.zeros((len(Q), ) + self.env.observation_space.shape)
+        targets = np.zeros((len(Q), self.env.action_space.n))
+        for i, (s, target) in enumerate(Q.items()):
+            inputs[i] = np.asarray(s)
+            targets[i] = target
         return inputs, targets
 
     def q_lambda(self, t, rewards, history, Q):

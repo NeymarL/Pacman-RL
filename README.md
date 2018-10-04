@@ -74,10 +74,20 @@ optional arguments:
 
 ### Sarsa(𝝀)
 
+**Forward-view**
+
 * Policy evaluation
     * ![](http://latex.codecogs.com/gif.latex?Q%28s%2C%20a%29%20%5Cleftarrow%20Q%28s%2C%20a%29%20&plus;%20%5Calpha%28q_t%5E%5Clambda-Q%28s%2Ca%29%29)
     * ![](http://latex.codecogs.com/gif.latex?q_t%5E%5Clambda%3D%281-%5Clambda%29%5Csum_%7Bn%3D1%7D%5E%5Cinfty%20%5Clambda%5E%7Bn-1%7Dq_t%5E%7B%28n%29%7D)
     * ![](http://latex.codecogs.com/gif.latex?q_t%5E%7B%28n%29%7D%3DR_%7Bt&plus;1%7D%20&plus;%20%5Cgamma%20R_%7Bt&plus;2%7D%20&plus;%20...%20&plus;%20%5Cgamma%5E%7Bn-1%7D%20R_%7Bt&plus;n%7D&plus;%5Cgamma%5En%20Q%28s_%7Bt&plus;n%7D%2C%20a_%7Bt&plus;n%7D%29)
+* Policy improvement: 𝜀-greedy
+* Q-value function approximation: 2-layer fully connected layer (input layer and output layer with no hidden layer)
+
+**Backward-view**
+
+* Policy evaluation
+    * ![](http://latex.codecogs.com/gif.latex?Q%28s%2C%20a%29%20%5Cleftarrow%20Q%28s%2C%20a%29%20&plus;%20%5Calpha%28R%20&plus;%20%5Cgamma%20Q%28s%27%2C%20a%27%29%20-%20Q%28s%2C%20a%29%29*E_t%28s%2C%20a%29)
+    * Accumulating eligibility trace: ![](http://latex.codecogs.com/gif.latex?E_t%28s%2C%20a%29%20%3D%5Cgamma%5Clambda%20E_%7Bt-1%7D%28s%2C%20a%29%20&plus;%201%28S_t%20%3D%20s%2C%20A_t%20%3D%20a%29)
 * Policy improvement: 𝜀-greedy
 * Q-value function approximation: 2-layer fully connected layer (input layer and output layer with no hidden layer)
 
