@@ -1,5 +1,5 @@
 # Sarsa control with Q-value function approximation
-# Policy evaluation: Q(s, a) <- Q(s, a) + alpha * (R + gamma * Q(s', a') - Q(s, a))
+# Policy evaluation: Q(s, a) <- Q(s, a) + 𝜶 * (R + 𝜸Q(s', a') - Q(s, a))
 # Policy improvement: epsilon-greedy exploration
 # Q-value function approximation: Two-layer perception (input layer and output layer only)
 
@@ -33,33 +33,19 @@ class SarsaControl(BaseController):
         '''
         return self.epsilon_greedy_action(observation, predict, return_q)
 
-    def update_q_value_on_batch(self, batch_history, batch_rewards):
+    def build_training_set(self, history, rewards):
         '''Sarsa evaluation
 
-        Q(s, a) <- Q(s, a) + alpha * (R + gamma * Q(s', a') - Q(s, a))
+        Q(s, a) <- Q(s, a) + 𝜶 * (R + 𝜸Q(s', a') - Q(s, a))
 
         Args:
-            batch_history = [[(s1, a1), (s2, a2), ...,(sT-1, aT-1)], ...]
-            batch_rewards = [[r2, r3, ..., rT], ...]
-        '''
-        x = None
-        y = None
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            futures = [executor.submit(self.build_training_set, history, rewards) 
-                       for history, rewards in zip(batch_history, batch_rewards)]
-        for future in futures:
-            if x is None:
-                x, y = future.result()
-            else:
-                inputs, targets = future.result()
-                x = np.concatenate((x, inputs), axis=0)
-                y = np.concatenate((y, targets), axis=0)
-        self.model.train_on_batch(x, y)
+            history = [(s1, a1), (s2, a2), ...,(sT-1, aT-1)]
+            rewards = [r2, r3, ..., rT]
 
-    def build_training_set(self, history, rewards):
-        '''
-        history = [(s1, a1), (s2, a2), ...,(sT-1, aT-1)]
-        rewards = [r2, r3, ..., rT]
+        Return:
+            (inputs, targets): 
+                inputs is a state list; 
+                targets contains lists of action-values for each state in inputs
         '''
         Q_ = dict()
         his1 = history.copy()

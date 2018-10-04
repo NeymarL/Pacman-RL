@@ -41,6 +41,11 @@ class MonteCarloControl(BaseController):
         Args:
             history = [(s1, a1), (s2, a2), ...,(sT-1, aT-1)]
             rewards = [r2, r3, ..., rT]
+
+        Return:
+            (inputs, targets): 
+                inputs is a state list; 
+                targets contains lists of action-values for each state in inputs
         '''
         N = defaultdict(int)
         Q = defaultdict(float)

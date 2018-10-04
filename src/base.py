@@ -50,6 +50,30 @@ class BaseController:
                     return (a, Q)
         return a
 
+    def update_q_value_on_batch(self, batch_history, batch_rewards):
+        '''General evaluation on batch
+
+        Args:
+            history = [(s1, a1), (s2, a2), ...,(sT-1, aT-1)]
+            rewards = [r2, r3, ..., rT]
+        '''
+        x = None
+        y = None
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            futures = [executor.submit(self.build_training_set, history, rewards) 
+                       for history, rewards in zip(batch_history, batch_rewards)]
+            for future in futures:
+                if x is None:
+                    x, y = future.result()
+                else:
+                    inputs, targets = future.result()
+                    x = np.concatenate((x, inputs), axis=0)
+                    y = np.concatenate((y, targets), axis=0)
+        self.model.train_on_batch(x, y)
+
+    def build_training_set(self, history, rewards):
+        raise NotImplementedError
+
     def save(self, path):
         self.model.save_weights(path)
         logger.info(f"Save weight to {path}")

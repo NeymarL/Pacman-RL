@@ -44,7 +44,6 @@ class TrainerConfig:
         self.num_episodes = 10000
         self.batch_size = 50
         self.evaluate_interval = 500
-        self.checkpoints_interval = 200
         self.lr = 0.1
         self.evaluate_episodes = 100
 
@@ -58,6 +57,7 @@ class ControllerConfig:
         self.epsilon = 0.5
         self.gamma = 0.9
         self.max_workers = 8
+        self.lambda_ = 0.5
 
     def __setattr__(self, name, value):
         self.__dict__[name] = value

@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from src.montecarlo import MonteCarloControl
 from src.sarsa import SarsaControl
+from src.sarsa_lambda import SarsaLambdaControl
 from src.config import Config, ControllerType
 
 logger = getLogger(__name__)
@@ -24,6 +25,8 @@ def main(config: Config):
         controller = MonteCarloControl(env, config)
     elif config.controller.controller_type == ControllerType.Sarsa:
         controller = SarsaControl(env, config)
+    elif config.controller.controller_type == ControllerType.Sarsa_lambda:
+        controller = SarsaLambdaControl(env, config)
     else:
         raise NotImplementedError
     
@@ -50,8 +53,7 @@ def train(config, env, controller):
     while i < episodes:
         if i % config.trainer.evaluate_interval == 0:
             current_reward = evaluate(config, env, controller)
-            if i % config.trainer.checkpoints_interval == 0 and len(total_rewards) > 0 and\
-                (current_reward > max(total_rewards)):
+            if len(total_rewards) > 0 and (current_reward > max(total_rewards)):
                 controller.save(config.resource.weight_path)
             total_rewards.append(current_reward)
             indexes.append(i)

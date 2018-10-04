@@ -22,10 +22,10 @@ def create_parser():
     parser.add_argument("--batch_size", help="set the batch size", default=50, type=int)
     parser.add_argument("--eva_interval", help="set how many episodes evaluate once", default=500, type=int)
     parser.add_argument("--evaluate_episodes", help="set evaluate how many episodes", default=100, type=int)
-    parser.add_argument("--checkpoints_interval", help="set how many episodes save the weight once", default=200, type=int)
     parser.add_argument("--lr", help="set learning rate", default=0.1, type=float)
     parser.add_argument("--epsilon", help="set epsilon when use epsilon-greedy", default=0.5, type=float)
     parser.add_argument("--gamma", help="set reward decay rate", default=0.9, type=float)
+    parser.add_argument("--lam", help="set lambda if use sarsa(lambda) algorithm", default=0.5, type=float)
     parser.add_argument("--max_workers", help="set max workers to train", default=8, type=int)
     return parser
 
@@ -48,11 +48,11 @@ def start():
     config.trainer.num_episodes = args.num_episodes
     config.trainer.batch_size = args.batch_size
     config.trainer.evaluate_interval = args.eva_interval
-    config.trainer.checkpoints_interval = args.checkpoints_interval
     config.trainer.lr = args.lr
     config.trainer.evaluate_episodes = args.evaluate_episodes
     config.controller.epsilon = args.epsilon
     config.controller.gamma = args.gamma
+    config.controller.lambda_ = args.lam
     config.controller.max_workers = args.max_workers
     main(config)
 
