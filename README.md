@@ -23,7 +23,7 @@ Full usage: run.py [-h] [--controller {MC,Sarsa,Sarsa_lambda,Q_learning}]
               [--num_episodes NUM_EPISODES] [--batch_size BATCH_SIZE]
               [--eva_interval EVA_INTERVAL]
               [--evaluate_episodes EVALUATE_EPISODES] [--lr LR]
-              [--epsilon EPSILON] [--gamma GAMMA] [--lam LAM]
+              [--epsilon EPSILON] [--gamma GAMMA] [--lam LAM] [--forward]
               [--max_workers MAX_WORKERS]
               {train,evaluate}
 
@@ -50,6 +50,7 @@ optional arguments:
   --epsilon EPSILON     set epsilon when use epsilon-greedy
   --gamma GAMMA         set reward decay rate
   --lam LAM             set lambda if use sarsa(lambda) algorithm
+  --forward             set to use forward-view sarsa(lambda)
   --max_workers MAX_WORKERS
                         set max workers to train
 ```
