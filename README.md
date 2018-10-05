@@ -9,6 +9,7 @@ Implement some classic reinforcement learning algorithms, test and visualize on 
 * Python 3.6+
 * gym
 * matplotlib
+* tensorflow
 * keras
 * mujoco_py (if you want to save replay)
 
