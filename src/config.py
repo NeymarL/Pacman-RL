@@ -62,7 +62,10 @@ class ControllerConfig:
 
     def __setattr__(self, name, value):
         self.__dict__[name] = value
-        logger.info(f"ControllerConfig.{name} = {value}")
+        if name == 'epsilon':
+            logger.info(f"ControllerConfig.{name} = {value:.2f}")
+        else:
+            logger.info(f"ControllerConfig.{name} = {value}")
 
 class ResourceConfig:
     def __init__(self):

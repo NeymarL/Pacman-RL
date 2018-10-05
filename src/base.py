@@ -27,8 +27,8 @@ class BaseController:
         self.graph = tf.get_default_graph()
         return model
 
-    def epsilon_greedy_action(self, observation, predict=False, return_q=False):
-        '''epsilon-greedy policy
+    def action(self, observation, predict=False, return_q=False, epsilon=None):
+        '''epsilon-greedy policy with epsilon decay
 
         Choose an action according to epsilon-greedy policy.
 
@@ -40,6 +40,9 @@ class BaseController:
         Return:
             The action choosed according to epsilon-greedy policy
         '''
+        if not epsilon:
+            # epsilon may decay
+            epsilon = self.epsilon
         if np.random.rand() <= self.epsilon and not predict:
             a = self.env.action_space.sample()
         else:

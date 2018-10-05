@@ -36,12 +36,6 @@ class SarsaLambdaControl(BaseController):
         self.model = self.build_model()
         self.max_workers = config.controller.max_workers
         self.forward = config.controller.forward
-        
-    def action(self, observation, predict=False, return_q=False):
-        '''
-        epsilon-greedy policy
-        '''
-        return self.epsilon_greedy_action(observation, predict, return_q)
 
     def build_training_set(self, history, rewards):
         if self.forward:
