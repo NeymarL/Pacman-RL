@@ -92,7 +92,13 @@ optional arguments:
 * Policy improvement: 𝜀-greedy
 * Q-value function approximation: 2-layer fully connected layer (input layer and output layer with no hidden layer)
 
+### Q-learning
+
+* Policy evaluation
+    * ![](http://latex.codecogs.com/gif.latex?Q%28s%2Ca%29%5Cleftarrow%20Q%28s%2C%20a%29&plus;%5Calpha%28R%20&plus;%20%5Cgamma%20%5Cmax_%7Ba%27%7DQ%28s%27%2C%20a%27%29%20-%20Q%28s%2C%20a%29%29)
+* Policy improvement: 𝜀-greedy
+* Q-value function approximation: 2-layer fully connected layer (input layer and output layer with no hidden layer)
+
 ## TODO
-* Q-learning
 * Monte-Carlo policy gradient (REINFORCE)
 * Actor-Critic policy gradient

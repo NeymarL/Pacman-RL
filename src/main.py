@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from src.montecarlo import MonteCarloControl
 from src.sarsa import SarsaControl
 from src.sarsa_lambda import SarsaLambdaControl
+from src.q_learning import QlearningControl
 from src.config import Config, ControllerType
 
 logger = getLogger(__name__)
@@ -27,6 +28,8 @@ def main(config: Config):
         controller = SarsaControl(env, config)
     elif config.controller.controller_type == ControllerType.Sarsa_lambda:
         controller = SarsaLambdaControl(env, config)
+    elif config.controller.controller_type == ControllerType.Q_learning:
+        controller = QlearningControl(env, config)
     else:
         raise NotImplementedError
     
@@ -71,7 +74,7 @@ def train(config, env, controller):
                 batch_rewards.append(rewards)
         i += batch_size
         endtime = time()
-        logger.info(f"Episode {i} Observation Finished, {(endtime - starttime):.2f}s")
+        logger.info(f"Episode {i} Observing Finished, {(endtime - starttime):.2f}s")
         starttime = time()
         controller.update_q_value_on_batch(batch_history, batch_rewards)
         endtime = time()

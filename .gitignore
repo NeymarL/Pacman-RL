@@ -1,7 +1,7 @@
 *.pyc
 *.h5
 .DS_Store
-graph/mc/*.png
+graph/*/*.png
 *.json
 *.mp4
 *.log
