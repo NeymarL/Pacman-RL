@@ -56,6 +56,10 @@ optional arguments:
                         set max workers to train
 ```
 
+![sample1](graph/sample1.gif)
+
+![sample2](graph/sample2.gif)
+
 ## Reinforcement Learning Algorithms
 
 ### Monte-Carlo Control
