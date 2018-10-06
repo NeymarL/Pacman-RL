@@ -59,13 +59,21 @@ def train(config, env, controller):
     total_rewards = []
     indexes = []
     i = 0
+    fail_count = 0
+    last_reward = 0
     while i < episodes:
         if i % config.trainer.evaluate_interval == 0:
             current_reward = evaluate_parallel(config, env, controller)
             if len(total_rewards) > 0 and (current_reward > max(total_rewards)):
                 controller.save(config.resource.weight_path)
-            total_rewards.append(current_reward)
-            indexes.append(i)
+            if len(total_rewards) == 0 or current_reward >= max(total_rewards):
+                total_rewards.append(current_reward)
+                indexes.append(i)
+            if current_reward < last_reward:
+                fail_count += 1
+                if fail_count >= 5:
+                    break
+            last_reward = current_reward
 
         starttime = time()
         batch_history = []

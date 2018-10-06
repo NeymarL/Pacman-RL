@@ -67,12 +67,16 @@ optional arguments:
 * Policy improvement: 𝜀-greedy with 𝜀 decay
 * Q-value function approximation: 2-layer fully connected layer (input layer and output layer with no hidden layer)
 
+![learning curve](graph/mc/mc.png)
+
 ### Sarsa(0)
 
 * Policy evaluation
     * ![](http://latex.codecogs.com/gif.latex?Q%28s%2Ca%29%5Cleftarrow%20Q%28s%2Ca%29&plus;%5Calpha%28R&plus;%5Cgamma%20Q%28s%27%2Ca%27%29-Q%28s%2Ca%29%29)
 * Policy improvement: 𝜀-greedy with 𝜀 decay
 * Q-value function approximation: 2-layer fully connected layer (input layer and output layer with no hidden layer)
+
+![learning curve](graph/sarsa/sarsa.png)
 
 ### Sarsa(𝝀)
 
@@ -93,12 +97,16 @@ optional arguments:
 * Policy improvement: 𝜀-greedy with 𝜀 decay
 * Q-value function approximation: 2-layer fully connected layer (input layer and output layer with no hidden layer)
 
+![learning curve](graph/sarsa_lambda/sarsa_lambda.png)
+
 ### Q-learning
 
 * Policy evaluation
     * ![](http://latex.codecogs.com/gif.latex?Q%28s%2Ca%29%5Cleftarrow%20Q%28s%2C%20a%29&plus;%5Calpha%28R%20&plus;%20%5Cgamma%20%5Cmax_%7Ba%27%7DQ%28s%27%2C%20a%27%29%20-%20Q%28s%2C%20a%29%29)
 * Policy improvement: 𝜀-greedy with 𝜀 decay
 * Q-value function approximation: 2-layer fully connected layer (input layer and output layer with no hidden layer)
+
+![learning curve](graph/q_learning/q_learning.png)
 
 ## TODO
 * Monte-Carlo policy gradient (REINFORCE)
