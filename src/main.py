@@ -13,6 +13,7 @@ from src.montecarlo import MonteCarloControl
 from src.sarsa import SarsaControl
 from src.sarsa_lambda import SarsaLambdaControl
 from src.q_learning import QlearningControl
+from src.reinforce import ReinforceControl
 from src.config import Config, ControllerType
 
 logger = getLogger(__name__)
@@ -30,11 +31,14 @@ def main(config: Config):
         controller = SarsaLambdaControl(env, config)
     elif config.controller.controller_type == ControllerType.Q_learning:
         controller = QlearningControl(env, config)
+    elif config.controller.controller_type == ControllerType.REINFORCE:
+        controller = ReinforceControl(env, config)
     else:
         raise NotImplementedError
     
     weight_path = config.resource.weight_path
-    if os.path.exists(weight_path):
+    if os.path.exists(weight_path) or \
+        config.controller.controller_type == ControllerType.REINFORCE:
         controller.load(weight_path)
     else:
         controller.save(weight_path)
@@ -87,12 +91,13 @@ def train(config, env, controller):
                 batch_history.append(history)
                 batch_rewards.append(rewards)
         i += batch_size
-        # epsilon decay
-        config.controller.epsilon *= 0.999 ** batch_size
+        if config.controller.controller_type != ControllerType.REINFORCE:
+            # epsilon decay
+            config.controller.epsilon *= 0.999 ** batch_size
         endtime = time()
         logger.info(f"Episode {i} Observing Finished, {(endtime - starttime):.2f}s")
         starttime = time()
-        controller.update_q_value_on_batch(batch_history, batch_rewards)
+        controller.train(batch_history, batch_rewards, i)
         endtime = time()
         logger.info(f"Episode {i} Learning Finished, {(endtime - starttime):.2f}s")
 
@@ -167,7 +172,11 @@ def eval(controller, env, config, i):
         if config.render:
             env.render()
         state = np.expand_dims(observation, axis=0)
-        action, Q = controller.action(state, predict=True, return_q=True)
+        if config.controller.controller_type == ControllerType.REINFORCE:
+            action = controller.action(state)
+            Q = 0
+        else:
+            action, Q = controller.action(state, predict=True, return_q=True)
         observation, reward, done, info = env.step(action)
         total_reward += reward
         rewards.append(reward)

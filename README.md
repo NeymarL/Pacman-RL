@@ -2,8 +2,6 @@
 
 Implement some classic reinforcement learning algorithms, test and visualize on Pacman under [OpenAI's Gym](https://gym.openai.com/) environment.
 
-**Note: This project is still under construction and at the very begining stage!**
-
 ## Requirements
 
 * Python 3.6+
@@ -112,6 +110,12 @@ optional arguments:
 
 ![learning curve](graph/q_learning/q_learning.png)
 
+### REINFORCE
+
+**Monte-Carlo policy gradient**
+
+* Update rule: ![](http://latex.codecogs.com/gif.latex?%5Ctheta%20%5Cleftarrow%20%5Ctheta%20&plus;%20%5Calpha%20%5Ctriangledown_%5Ctheta%20%5Clog%20%5Cpi_%5Ctheta%28s_t%2C%20a_t%29G_t)
+* Policy function approximation: Softmax policy
+
 ## TODO
-* Monte-Carlo policy gradient (REINFORCE)
 * Actor-Critic policy gradient

@@ -14,6 +14,7 @@ class ControllerType(Enum):
     Sarsa = 1
     Sarsa_lambda = 2
     Q_learning = 3
+    REINFORCE = 4
 
 class Config:
     def __init__(self, controller_type):
@@ -44,7 +45,7 @@ class TrainerConfig:
         self.num_episodes = 10000
         self.batch_size = 50
         self.evaluate_interval = 500
-        self.lr = 0.1
+        self.lr = 0.0001
         self.evaluate_episodes = 100
 
     def __setattr__(self, name, value):
@@ -76,7 +77,13 @@ class ResourceConfig:
         self.log_path = os.path.join(self.project_dir, 'main.log')
 
     def set_path(self, controller_type):
-        self.weight_path = os.path.join(self.weight_dir, controller_type.name.lower() + '.h5')
+        if controller_type == ControllerType.REINFORCE:
+            self.weight_path = os.path.join(self.weight_dir, controller_type.name.lower())
+            if not os.path.exists(self.weight_path):
+                os.makedirs(self.weight_path)
+            self.weight_path = os.path.join(self.weight_path, 'model.ckpt')
+        else:
+            self.weight_path = os.path.join(self.weight_dir, controller_type.name.lower() + '.h5')
         self.graph_dir = os.path.join(self.project_dir, 'graph')
         self.graph_dir = os.path.join(self.graph_dir, controller_type.name.lower())
 

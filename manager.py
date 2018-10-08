@@ -22,7 +22,7 @@ def create_parser():
     parser.add_argument("--batch_size", help="set the batch size", default=50, type=int)
     parser.add_argument("--eva_interval", help="set how many episodes evaluate once", default=500, type=int)
     parser.add_argument("--evaluate_episodes", help="set evaluate how many episodes", default=100, type=int)
-    parser.add_argument("--lr", help="set learning rate", default=0.1, type=float)
+    parser.add_argument("--lr", help="set learning rate", default=0.0001, type=float)
     parser.add_argument("--epsilon", help="set epsilon when use epsilon-greedy", default=0.5, type=float)
     parser.add_argument("--gamma", help="set reward decay rate", default=0.9, type=float)
     parser.add_argument("--lam", help="set lambda if use sarsa(lambda) algorithm", default=0.5, type=float)

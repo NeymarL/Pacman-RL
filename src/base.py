@@ -53,12 +53,12 @@ class BaseController:
                     return (a, Q)
         return a
 
-    def update_q_value_on_batch(self, batch_history, batch_rewards):
-        '''General evaluation on batch
+    def train(self, batch_history, batch_rewards, i=None):
+        '''Update parameters
 
         Args:
-            history = [(s1, a1), (s2, a2), ...,(sT-1, aT-1)]
-            rewards = [r2, r3, ..., rT]
+            batch_history = [[(s1, a1), (s2, a2), ...,(sT-1, aT-1)], ...]
+            batch_rewards = [[r2, r3, ..., rT], ...]
         '''
         x = None
         y = None

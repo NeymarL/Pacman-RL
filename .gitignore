@@ -5,3 +5,6 @@ graph/*/*.png
 *.json
 *.mp4
 *.log
+checkpoint
+*.ckpt.*
+*.out.*
