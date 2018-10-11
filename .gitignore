@@ -8,3 +8,5 @@ graph/*/*.png
 checkpoint
 *.ckpt.*
 *.out.*
+Icon*
+
