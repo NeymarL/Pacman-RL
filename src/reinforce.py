@@ -38,8 +38,8 @@ class ReinforceControl(BaseController):
             inputs=self.s,
             units=self.env.action_space.n,    # output units
             activation=tf.nn.softmax,   # get action probabilities
-            kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
-            bias_initializer=tf.constant_initializer(0.1),  # biases
+            kernel_initializer=tf.random_normal_initializer(0., 0.0001),  # weights
+            bias_initializer=tf.constant_initializer(0.0001),  # biases
             name='acts_prob'
         )
         # cost
@@ -78,10 +78,11 @@ class ReinforceControl(BaseController):
                                                                                      batch_rewards)
         batch_actions = np.asarray(batch_actions)
         batch_actions = np.expand_dims(batch_actions, axis=1)
-        _, summary = self.sess.run([self.optimizer, self.summary], feed_dict={self.G: batch_return,
+        _, summary, cost = self.sess.run([self.optimizer, self.summary, self.cost], feed_dict={self.G: batch_return,
                                                               self.s: batch_states,
                                                               self.a: batch_actions})
         self.train_writer.add_summary(summary, i)
+        logger.info(f"Episode {i}, logPi(s, a)G = {cost:.2f}")
 
     def build_training_set_on_batch(self, batch_history, batch_rewards):
         batch_states = []

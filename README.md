@@ -17,7 +17,7 @@ Implement some classic reinforcement learning algorithms, test and visualize on 
 * Run `python run.py --controller MC --render --show_plot --evaluate_episodes 10 evaluate` for evaluation using Monte-Carlo control. It will render the Pacman environment and show the dynamic Q-value and reward plot at the same time.
 
 ```
-Full usage: run.py [-h] [--controller {MC,Sarsa,Sarsa_lambda,Q_learning}]
+Full usage: run.py [-h] [--controller {MC,Sarsa,Sarsa_lambda,Q_learning,REINFORCE}]
               [--render] [--save_replay] [--save_plot] [--show_plot]
               [--num_episodes NUM_EPISODES] [--batch_size BATCH_SIZE]
               [--eva_interval EVA_INTERVAL]
@@ -31,7 +31,7 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --controller {MC,Sarsa,Sarsa_lambda,Q_learning}
+  --controller {MC,Sarsa,Sarsa_lambda,Q_learning,REINFORCE}
                         choose an algorithm (controller)
   --render              set to render the env when evaluate
   --save_replay         set to save replay
@@ -116,6 +116,9 @@ optional arguments:
 
 * Update rule: ![](http://latex.codecogs.com/gif.latex?%5Ctheta%20%5Cleftarrow%20%5Ctheta%20&plus;%20%5Calpha%20%5Ctriangledown_%5Ctheta%20%5Clog%20%5Cpi_%5Ctheta%28s_t%2C%20a_t%29G_t)
 * Policy function approximation: Softmax policy
+
+**Note**: You shold pick a very small `lr` to train a decent model, e.g. `lr = 0.00001`
+![learning curve](graph/reinforce/reinforce.png)
 
 ## TODO
 * Actor-Critic policy gradient
