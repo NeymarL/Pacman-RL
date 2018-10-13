@@ -15,6 +15,7 @@ class ControllerType(Enum):
     Sarsa_lambda = 2
     Q_learning = 3
     REINFORCE = 4
+    ActorCritic = 5
 
 class Config:
     def __init__(self, controller_type):
@@ -77,7 +78,7 @@ class ResourceConfig:
         self.log_path = os.path.join(self.project_dir, 'main.log')
 
     def set_path(self, controller_type):
-        if controller_type == ControllerType.REINFORCE:
+        if controller_type == ControllerType.REINFORCE or controller_type == ControllerType.ActorCritic:
             self.weight_path = os.path.join(self.weight_dir, controller_type.name.lower())
             if not os.path.exists(self.weight_path):
                 os.makedirs(self.weight_path)

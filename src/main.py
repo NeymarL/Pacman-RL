@@ -9,12 +9,14 @@ from logging import getLogger
 from gym.wrappers import Monitor
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from src.config import Config, ControllerType
 from src.montecarlo import MonteCarloControl
 from src.sarsa import SarsaControl
 from src.sarsa_lambda import SarsaLambdaControl
 from src.q_learning import QlearningControl
 from src.reinforce import ReinforceControl
-from src.config import Config, ControllerType
+from src.actor_critic import ActorCriticControl
+
 
 logger = getLogger(__name__)
 
@@ -23,17 +25,18 @@ def main(config: Config):
     if config.render and config.save_replay:
         env = Monitor(env, config.resource.replay_dir, force=True)
 
-    if config.controller.controller_type == ControllerType.MC:
-        controller = MonteCarloControl(env, config)
-    elif config.controller.controller_type == ControllerType.Sarsa:
-        controller = SarsaControl(env, config)
-    elif config.controller.controller_type == ControllerType.Sarsa_lambda:
-        controller = SarsaLambdaControl(env, config)
-    elif config.controller.controller_type == ControllerType.Q_learning:
-        controller = QlearningControl(env, config)
-    elif config.controller.controller_type == ControllerType.REINFORCE:
-        controller = ReinforceControl(env, config)
-    else:
+    controller_dict = {
+        ControllerType.MC: MonteCarloControl,
+        ControllerType.Sarsa: SarsaControl,
+        ControllerType.Sarsa_lambda: SarsaLambdaControl,
+        ControllerType.Q_learning: QlearningControl,
+        ControllerType.REINFORCE: ReinforceControl,
+        ControllerType.ActorCritic: ActorCriticControl
+    }
+
+    try:
+        controller = controller_dict[config.controller.controller_type](env, config)
+    except KeyError as e:
         raise NotImplementedError
     
     weight_path = config.resource.weight_path

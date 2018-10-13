@@ -42,7 +42,7 @@ class ReinforceControl(BaseController):
             bias_initializer=tf.constant_initializer(0.0001),  # biases
             name='acts_prob'
         )
-        # cost
+        # cost = log(pi(s_t, a_t))G_t
         log_prob = tf.squeeze(tf.log(tf.batch_gather(self.acts_prob, self.a)))
         self.cost = tf.reduce_mean(tf.multiply(self.G, log_prob))
         tf.summary.scalar('Log prob return', self.cost)
