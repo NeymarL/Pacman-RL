@@ -129,5 +129,5 @@ optional arguments:
 
 * Critic
   * TD policy evaluation ![](http://latex.codecogs.com/gif.latex?V_%5Cpi%28s%29%20%5Cleftarrow%20V_%5Cpi%28s%29%20&plus;%20%5Calpha%5Cdelta_%5Cpi)
-  * ![](http://latex.codecogs.com/gif.latex?%5Cdelta_%5Cpi%20%3D%20R%20&plus;%20V_%5Cpi%28s%29%20-%20V_%5Cpi%28s%27%29)
+  * ![](http://latex.codecogs.com/gif.latex?%5Cdelta_%5Cpi%20%3D%20R%20&plus;%20%5Cgamma%20V_%5Cpi%28s%27%29%20-%20V_%5Cpi%28s%29)
   * Value function approximation: a fully connected layer (input layer and output layer with no hidden layer)
