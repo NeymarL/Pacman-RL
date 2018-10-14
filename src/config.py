@@ -5,9 +5,11 @@ from logging import getLogger
 
 logger = getLogger(__name__)
 
+
 def _project_dir():
     d = os.path.dirname
     return d(d(os.path.abspath(__file__)))
+
 
 class ControllerType(Enum):
     MC = 0
@@ -16,6 +18,7 @@ class ControllerType(Enum):
     Q_learning = 3
     REINFORCE = 4
     ActorCritic = 5
+
 
 class Config:
     def __init__(self, controller_type):
@@ -41,6 +44,7 @@ class Config:
         self.__dict__[name] = value
         logger.info(f"Config.{name} = {value}")
 
+
 class TrainerConfig:
     def __init__(self):
         self.num_episodes = 10000
@@ -52,6 +56,7 @@ class TrainerConfig:
     def __setattr__(self, name, value):
         self.__dict__[name] = value
         logger.info(f"TrainerConfig.{name} = {value}")
+
 
 class ControllerConfig:
     def __init__(self, controller_type):
@@ -69,6 +74,7 @@ class ControllerConfig:
         else:
             logger.info(f"ControllerConfig.{name} = {value}")
 
+
 class ResourceConfig:
     def __init__(self):
         self.project_dir = _project_dir()
@@ -79,17 +85,21 @@ class ResourceConfig:
 
     def set_path(self, controller_type):
         if controller_type == ControllerType.REINFORCE or controller_type == ControllerType.ActorCritic:
-            self.weight_path = os.path.join(self.weight_dir, controller_type.name.lower())
+            self.weight_path = os.path.join(
+                self.weight_dir, controller_type.name.lower())
             if not os.path.exists(self.weight_path):
                 os.makedirs(self.weight_path)
             self.weight_path = os.path.join(self.weight_path, 'model.ckpt')
         else:
-            self.weight_path = os.path.join(self.weight_dir, controller_type.name.lower() + '.h5')
+            self.weight_path = os.path.join(
+                self.weight_dir, controller_type.name.lower() + '.h5')
         self.graph_dir = os.path.join(self.project_dir, 'graph')
-        self.graph_dir = os.path.join(self.graph_dir, controller_type.name.lower())
+        self.graph_dir = os.path.join(
+            self.graph_dir, controller_type.name.lower())
 
     def create_directories(self):
-        dirs = [self.project_dir, self.weight_dir, self.graph_dir, self.replay_dir]
+        dirs = [self.project_dir, self.weight_dir,
+                self.graph_dir, self.replay_dir]
         for d in dirs:
             if not os.path.exists(d):
                 os.makedirs(d)

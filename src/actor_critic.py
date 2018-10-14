@@ -16,6 +16,7 @@ from src.config import Config, ControllerType
 
 logger = getLogger(__name__)
 
+
 class ActorCriticControl(BaseController):
     def __init__(self, env, config: Config):
         self.env = env
@@ -25,10 +26,10 @@ class ActorCriticControl(BaseController):
         self.lr = config.trainer.lr
         self.max_workers = config.controller.max_workers
         self.sess = tf.Session()
-        self.actor = Actor(self.sess, self.env.observation_space.shape[0], 
+        self.actor = Actor(self.sess, self.env.observation_space.shape[0],
                            self.env.action_space.n, self.config.trainer.lr)
         self.critic = Critic(self.sess, self.env.observation_space.shape[0],
-                            self.config.trainer.lr)
+                             self.config.trainer.lr)
         self.build_model()
 
     def build_model(self):
@@ -54,7 +55,7 @@ class ActorCriticControl(BaseController):
         batch_tdtargets = []
         batch_tderror = []
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            futures = [executor.submit(self.build_training_set, history, rewards) 
+            futures = [executor.submit(self.build_training_set, history, rewards)
                        for history, rewards in zip(batch_history, batch_rewards)]
             for future in futures:
                 states, actions, td_targets, td_errors = future.result()
@@ -77,7 +78,8 @@ class ActorCriticControl(BaseController):
             if i < T - 1:
                 s_ = states[i + 1]
                 if tuple(s_) not in V:
-                    V[tuple(s_)] = self.critic.value_of(np.expand_dims(s_, axis=0))
+                    V[tuple(s_)] = self.critic.value_of(
+                        np.expand_dims(s_, axis=0))
                 td_target = r + self.gamma * V[tuple(s_)]
             else:
                 td_target = r
@@ -101,6 +103,7 @@ class ActorCriticControl(BaseController):
         except Exception:
             pass
 
+
 class Actor:
     def __init__(self, sess, n_features, n_actions, lr):
         self.sess = sess
@@ -118,7 +121,8 @@ class Actor:
             inputs=self.s,
             units=self.n_actions,    # output units
             activation=tf.nn.softmax,   # get action probabilities
-            kernel_initializer=tf.random_normal_initializer(0., 0.0001),  # weights
+            kernel_initializer=tf.random_normal_initializer(
+                0., 0.0001),  # weights
             bias_initializer=tf.constant_initializer(0.0001),  # biases
             name='acts_prob'
         )
@@ -126,7 +130,6 @@ class Actor:
         log_prob = tf.squeeze(tf.log(tf.batch_gather(self.acts_prob, self.a)))
         self.cost = tf.reduce_mean(tf.multiply(self.td_error, log_prob))
         self.optimizer = tf.train.AdamOptimizer(self.lr).minimize(-self.cost)
-        
 
     def action(self, observation):
         '''
@@ -139,7 +142,8 @@ class Actor:
             The action choosed according to softmax policy
         '''
         probs = self.sess.run(self.acts_prob, feed_dict={self.s: observation})
-        my_action = int(np.random.choice(range(self.n_actions), p=probs.ravel()))
+        my_action = int(np.random.choice(
+            range(self.n_actions), p=probs.ravel()))
         return my_action
 
     def train(self, batch_states, batch_actions, batch_tderror, i):
@@ -154,9 +158,10 @@ class Actor:
         batch_actions = np.asarray(batch_actions)
         batch_actions = np.expand_dims(batch_actions, axis=1)
         _, cost = self.sess.run([self.optimizer, self.cost], feed_dict={self.td_error: batch_tderror,
-                                                              self.s: batch_states,
-                                                              self.a: batch_actions})
+                                                                        self.s: batch_states,
+                                                                        self.a: batch_actions})
         logger.info(f"Episode {i}, Actor loss = {-cost:.2f}")
+
 
 class Critic:
     def __init__(self, sess, n_features, lr):
@@ -172,11 +177,13 @@ class Critic:
             inputs=self.s,
             units=1,    # output units
             activation=None,   # get action probabilities
-            kernel_initializer=tf.random_normal_initializer(0., 0.0001),  # weights
+            kernel_initializer=tf.random_normal_initializer(
+                0., 0.0001),  # weights
             bias_initializer=tf.constant_initializer(0.0001),  # biases
             name='value'
         ))
-        self.cost = tf.reduce_mean(tf.losses.mean_squared_error(self.td_targets, self.value))
+        self.cost = tf.reduce_mean(
+            tf.losses.mean_squared_error(self.td_targets, self.value))
         self.optimizer = tf.train.AdamOptimizer(0.0001).minimize(self.cost)
 
     def value_of(self, state):
@@ -185,7 +192,5 @@ class Critic:
 
     def train(self, batch_states, batch_tdtargets, i):
         _, cost = self.sess.run([self.optimizer, self.cost], feed_dict={self.s: batch_states,
-                                                            self.td_targets: batch_tdtargets})
+                                                                        self.td_targets: batch_tdtargets})
         logger.info(f"Episode {i}, Critic loss = {cost:.2f}")
-
-

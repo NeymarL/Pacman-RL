@@ -20,6 +20,7 @@ from src.actor_critic import ActorCriticControl
 
 logger = getLogger(__name__)
 
+
 def main(config: Config):
     env = gym.make('MsPacman-ram-v0')
     if config.render and config.save_replay:
@@ -35,14 +36,15 @@ def main(config: Config):
     }
 
     try:
-        controller = controller_dict[config.controller.controller_type](env, config)
+        controller = controller_dict[config.controller.controller_type](
+            env, config)
     except KeyError as e:
         raise NotImplementedError
-    
+
     weight_path = config.resource.weight_path
     if os.path.exists(weight_path) or \
-        config.controller.controller_type == ControllerType.REINFORCE or \
-        config.controller.controller_type == ControllerType.ActorCritic:
+            config.controller.controller_type == ControllerType.REINFORCE or \
+            config.controller.controller_type == ControllerType.ActorCritic:
         controller.load(weight_path)
     else:
         controller.save(weight_path)
@@ -60,6 +62,7 @@ def main(config: Config):
     else:
         # do nothing
         pass
+
 
 def train(config, env, controller):
     episodes = config.trainer.num_episodes
@@ -89,7 +92,8 @@ def train(config, env, controller):
         futures = []
         with ThreadPoolExecutor(max_workers=config.controller.max_workers) as executor:
             for j in range(batch_size):
-                futures.append(executor.submit(simulation, copy.deepcopy(env), controller, config.controller.epsilon))
+                futures.append(executor.submit(simulation, copy.deepcopy(
+                    env), controller, config.controller.epsilon))
             for future in as_completed(futures):
                 history, rewards = future.result()
                 batch_history.append(history)
@@ -99,11 +103,13 @@ def train(config, env, controller):
             # epsilon decay
             config.controller.epsilon *= 0.999 ** batch_size
         endtime = time()
-        logger.info(f"Episode {i} Observing Finished, {(endtime - starttime):.2f}s")
+        logger.info(
+            f"Episode {i} Observing Finished, {(endtime - starttime):.2f}s")
         starttime = time()
         controller.train(batch_history, batch_rewards, i)
         endtime = time()
-        logger.info(f"Episode {i} Learning Finished, {(endtime - starttime):.2f}s")
+        logger.info(
+            f"Episode {i} Learning Finished, {(endtime - starttime):.2f}s")
 
     plt.plot(indexes, total_rewards, 'g-')
     plt.title('Learning Curve')
@@ -111,7 +117,9 @@ def train(config, env, controller):
     plt.ylabel('Mean Reward')
     plt.legend((config.controller.controller_type.name), loc='best')
     plt.savefig(f"{config.resource.graph_dir}/learn_curve.png")
-    logger.info(f"Learning curve saved as {config.resource.graph_dir}/learn_curve.png")
+    logger.info(
+        f"Learning curve saved as {config.resource.graph_dir}/learn_curve.png")
+
 
 def simulation(env, controller, epsilon):
     done = False
@@ -126,6 +134,7 @@ def simulation(env, controller, epsilon):
         rewards.append(reward)
     return (history, rewards)
 
+
 def evaluate(config, env, controller):
     logger.info("Evaluating...")
     mean_reward = 0
@@ -137,6 +146,7 @@ def evaluate(config, env, controller):
     logger.info(f"Mean reward = {mean_reward}")
     return mean_reward
 
+
 def evaluate_parallel(config, env, controller):
     logger.info("Evaluating...")
     mean_reward = 0
@@ -144,13 +154,15 @@ def evaluate_parallel(config, env, controller):
     futures = []
     with ThreadPoolExecutor(max_workers=config.controller.max_workers) as executor:
         while i < config.trainer.evaluate_episodes:
-            futures.append(executor.submit(eval, controller, copy.deepcopy(env), config, i))
+            futures.append(executor.submit(
+                eval, controller, copy.deepcopy(env), config, i))
             i += 1
         for future in as_completed(futures):
             mean_reward += future.result()
     mean_reward /= config.trainer.evaluate_episodes
     logger.info(f"Mean reward = {mean_reward}")
     return mean_reward
+
 
 def eval(controller, env, config, i):
     observation = env.reset()
@@ -204,7 +216,8 @@ def eval(controller, env, config, i):
                 plt.pause(1e-17)
     if config.save_plot:
         plt.savefig(f"{config.resource.graph_dir}/Evaluate_ep{i}.png")
-        logger.info(f"Total reward = {total_reward} Save sa {config.resource.graph_dir}/Evaluate_ep{i}.png")
+        logger.info(
+            f"Total reward = {total_reward} Save sa {config.resource.graph_dir}/Evaluate_ep{i}.png")
     elif config.show_plot:
         logger.info(f"Total reward = {total_reward}")
         plt.close('all')

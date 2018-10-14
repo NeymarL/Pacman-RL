@@ -18,6 +18,7 @@ from src.config import Config, ControllerType
 
 logger = getLogger(__name__)
 
+
 class MonteCarloControl(BaseController):
     def __init__(self, env, config: Config):
         super().__init__()

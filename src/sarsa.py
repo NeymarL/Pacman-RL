@@ -18,6 +18,7 @@ from src.config import Config, ControllerType
 
 logger = getLogger(__name__)
 
+
 class SarsaControl(BaseController):
     def __init__(self, env, config: Config):
         super().__init__()
@@ -56,6 +57,7 @@ class SarsaControl(BaseController):
                 targets[i, a] = r
             else:
                 if tuple(s_) not in Q_:
-                    Q_[tuple(s_)] = self.model.predict(np.expand_dims(s_, axis=0))[0]
+                    Q_[tuple(s_)] = self.model.predict(
+                        np.expand_dims(s_, axis=0))[0]
                 targets[i, a] = r + self.gamma * Q_[tuple(s_)][a_]
         return inputs, targets

@@ -1,5 +1,5 @@
 # Sarsa(𝝀) control with Q-value function approximation
-# Policy evaluation: 
+# Policy evaluation:
 #   Forward-view:
 #       Q(s, a) <- Q(s, a) + 𝜶 * (q_t_𝝀 - Q(s, a))
 #       q_t_𝝀 = (1 - 𝝀) * ∑ 𝝀^(n - 1)q_t_n
@@ -25,6 +25,7 @@ from src.base import BaseController
 from src.config import Config, ControllerType
 
 logger = getLogger(__name__)
+
 
 class SarsaLambdaControl(BaseController):
     def __init__(self, env, config: Config):
@@ -63,7 +64,8 @@ class SarsaLambdaControl(BaseController):
         for t, ((s, a), r) in enumerate(zip(history, rewards)):
             inputs[t] = np.array(s)
             if tuple(s) not in Q:
-                Q[tuple(s)] = self.model.predict(np.expand_dims(inputs[t], axis=0))
+                Q[tuple(s)] = self.model.predict(
+                    np.expand_dims(inputs[t], axis=0))
             targets[t] = Q[tuple(s)]
             targets[t, a] = self.q_lambda(t, rewards, history, Q)
         return inputs, targets
@@ -95,19 +97,22 @@ class SarsaLambdaControl(BaseController):
             s = tuple(s)
             E[(s, a)] += 1
             if s not in Q:
-                Q[s] = self.model.predict(np.expand_dims(np.asarray(s), axis=0))[0]
+                Q[s] = self.model.predict(
+                    np.expand_dims(np.asarray(s), axis=0))[0]
             if i + 1 == len(rewards):
                 td_error = r - Q[s][a]
             else:
                 s_ = tuple(s_)
                 if s_ not in Q:
-                    Q[s_] = self.model.predict(np.expand_dims(np.array(s_), axis=0))[0]
+                    Q[s_] = self.model.predict(
+                        np.expand_dims(np.array(s_), axis=0))[0]
                 td_error = r + self.gamma * Q[s_][a_] - Q[s][a]
             # update Q and E
             deletion = []
             for (s, a), e in E.items():
                 if s not in Q:
-                    Q[s] = self.model.predict(np.expand_dims(np.asarray(s), axis=0))[0]
+                    Q[s] = self.model.predict(
+                        np.expand_dims(np.asarray(s), axis=0))[0]
                 Q[s][a] += td_error * E[(s, a)]
                 E[(s, a)] *= self.lambda_
                 if E[(s, a)] < 0.01:
@@ -149,9 +154,10 @@ class SarsaLambdaControl(BaseController):
                 s_tn = history[t + n][0]
                 a_tn = history[t + n][1]
                 if tuple(s_tn) not in Q:
-                    Q[tuple(s_tn)] = self.model.predict(np.expand_dims(s_tn, axis=0))[0]
+                    Q[tuple(s_tn)] = self.model.predict(
+                        np.expand_dims(s_tn, axis=0))[0]
                 qtn = qtn1 - (self.gamma ** (n - 1)) * (rewards[t + n] - Q[tuple(s_tn_1)][a_tn_1]) \
-                      + (self.gamma ** n) * Q[tuple(s_tn)][a_tn]
+                    + (self.gamma ** n) * Q[tuple(s_tn)][a_tn]
             q_t_lambda += (self.lambda_ ** (n - 1)) * qtn
         return q_t_lambda
 
@@ -170,7 +176,8 @@ class SarsaLambdaControl(BaseController):
         q_t_lambda = 0
         qtns = []
         for n in range(1, len(rewards) - t):
-            q_t_lambda += (self.lambda_ ** (n - 1)) * self.q_t_n(t, n, rewards, history, Q)
+            q_t_lambda += (self.lambda_ ** (n - 1)) * \
+                self.q_t_n(t, n, rewards, history, Q)
         return q_t_lambda
 
     def q_t_n(self, t, n, rewards, history, Q):
@@ -193,7 +200,7 @@ class SarsaLambdaControl(BaseController):
             s_n = history[t + n][0]
             a_n = history[t + n][1]
             if tuple(s_n) not in Q:
-                Q[tuple(s_n)] = self.model.predict(np.expand_dims(s_n, axis=0))[0]
+                Q[tuple(s_n)] = self.model.predict(
+                    np.expand_dims(s_n, axis=0))[0]
             G += (self.gamma ** n) * Q[tuple(s_n)][a_n]
         return G
-

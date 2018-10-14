@@ -16,6 +16,7 @@ from src.config import Config, ControllerType
 
 logger = getLogger(__name__)
 
+
 class ReinforceControl(BaseController):
     def __init__(self, env, config: Config):
         super().__init__()
@@ -30,7 +31,8 @@ class ReinforceControl(BaseController):
 
     def build_model(self):
         # Input placeholder
-        self.s = tf.placeholder(tf.float32, [None, self.env.observation_space.shape[0]])
+        self.s = tf.placeholder(
+            tf.float32, [None, self.env.observation_space.shape[0]])
         self.a = tf.placeholder(tf.int32, [None, 1])
         self.G = tf.placeholder(tf.float32, [None])
         # Construct model
@@ -38,7 +40,8 @@ class ReinforceControl(BaseController):
             inputs=self.s,
             units=self.env.action_space.n,    # output units
             activation=tf.nn.softmax,   # get action probabilities
-            kernel_initializer=tf.random_normal_initializer(0., 0.0001),  # weights
+            kernel_initializer=tf.random_normal_initializer(
+                0., 0.0001),  # weights
             bias_initializer=tf.constant_initializer(0.0001),  # biases
             name='acts_prob'
         )
@@ -50,7 +53,7 @@ class ReinforceControl(BaseController):
         self.summary = tf.summary.merge_all()
         self.sess.run(tf.global_variables_initializer())
         self.train_writer = tf.summary.FileWriter(self.config.resource.graph_dir,
-                                                self.sess.graph)
+                                                  self.sess.graph)
 
     def action(self, observation, predict=False, return_q=False, epsilon=None):
         '''
@@ -64,7 +67,8 @@ class ReinforceControl(BaseController):
             The action choosed according to softmax policy
         '''
         probs = self.sess.run(self.acts_prob, feed_dict={self.s: observation})
-        my_action = int(np.random.choice(range(self.env.action_space.n), p=probs.ravel()))
+        my_action = int(np.random.choice(
+            range(self.env.action_space.n), p=probs.ravel()))
         return my_action
 
     def train(self, batch_history, batch_rewards, i):
@@ -74,13 +78,13 @@ class ReinforceControl(BaseController):
             batch_history = [[(s1, a1), (s2, a2), ...,(sT-1, aT-1)], ...]
             batch_rewards = [[r2, r3, ..., rT], ...]
         '''
-        batch_states, batch_actions, batch_return = self.build_training_set_on_batch(batch_history, 
+        batch_states, batch_actions, batch_return = self.build_training_set_on_batch(batch_history,
                                                                                      batch_rewards)
         batch_actions = np.asarray(batch_actions)
         batch_actions = np.expand_dims(batch_actions, axis=1)
         _, summary, cost = self.sess.run([self.optimizer, self.summary, self.cost], feed_dict={self.G: batch_return,
-                                                              self.s: batch_states,
-                                                              self.a: batch_actions})
+                                                                                               self.s: batch_states,
+                                                                                               self.a: batch_actions})
         self.train_writer.add_summary(summary, i)
         logger.info(f"Episode {i}, logPi(s, a)G = {cost:.2f}")
 
@@ -89,7 +93,7 @@ class ReinforceControl(BaseController):
         batch_actions = []
         batch_return = []
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            futures = [executor.submit(self.build_training_set, history, rewards) 
+            futures = [executor.submit(self.build_training_set, history, rewards)
                        for history, rewards in zip(batch_history, batch_rewards)]
             for future in futures:
                 states, actions, returns = future.result()

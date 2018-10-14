@@ -14,6 +14,7 @@ from src.config import Config, ControllerType
 
 logger = getLogger(__name__)
 
+
 class BaseController:
     def __init__(self):
         self.model = None
@@ -23,8 +24,8 @@ class BaseController:
 
     def build_model(self):
         model = Sequential()
-        model.add(Dense(self.env.action_space.n, input_shape=self.env.observation_space.shape, 
-                             kernel_initializer='uniform', activation='linear'))
+        model.add(Dense(self.env.action_space.n, input_shape=self.env.observation_space.shape,
+                        kernel_initializer='uniform', activation='linear'))
         model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
         self.graph = tf.get_default_graph()
         return model
@@ -65,7 +66,7 @@ class BaseController:
         x = None
         y = None
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            futures = [executor.submit(self.build_training_set, history, rewards) 
+            futures = [executor.submit(self.build_training_set, history, rewards)
                        for history, rewards in zip(batch_history, batch_rewards)]
             for future in futures:
                 if x is None:
