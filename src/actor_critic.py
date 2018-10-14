@@ -9,8 +9,6 @@ import tensorflow as tf
 
 from logging import getLogger
 from collections import defaultdict
-from keras.models import Sequential
-from keras.layers import Dense, Flatten
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from src.base import BaseController
@@ -75,7 +73,7 @@ class ActorCriticControl(BaseController):
         td_errors = []
         V = defaultdict(float)
         T = len(rewards)
-        for i, (s, a, r) in enumerate(zip(states, actions, rewards)):
+        for i, (s, r) in enumerate(zip(states, rewards)):
             if i < T - 1:
                 s_ = states[i + 1]
                 if tuple(s_) not in V:
@@ -100,7 +98,7 @@ class ActorCriticControl(BaseController):
             saver = tf.train.Saver()
             saver.restore(self.sess, path)
             logger.info(f"Load weight from {path}")
-        except Exception as e:
+        except Exception:
             pass
 
 class Actor:

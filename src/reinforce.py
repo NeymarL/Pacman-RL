@@ -132,5 +132,5 @@ class ReinforceControl(BaseController):
             saver = tf.train.Saver()
             saver.restore(self.sess, path)
             logger.info(f"Load weight from {path}")
-        except Exception as e:
+        except Exception:
             pass

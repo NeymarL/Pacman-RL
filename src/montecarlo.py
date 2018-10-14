@@ -43,7 +43,7 @@ class MonteCarloControl(BaseController):
         '''
         N = defaultdict(int)
         Q = defaultdict(float)
-        for i, ((s, a), r) in enumerate(zip(history, rewards)):
+        for i, (s, a) in enumerate(history):
             s = tuple(s)
             N[(s, a)] += 1
             G = self.compute_return(rewards, i)

@@ -18,6 +18,8 @@ class BaseController:
     def __init__(self):
         self.model = None
         self.epsilon = 0
+        self.env = None
+        self.max_workers = 1
 
     def build_model(self):
         model = Sequential()
