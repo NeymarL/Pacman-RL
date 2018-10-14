@@ -29,7 +29,8 @@ class ActorCriticControl(BaseController):
         self.sess = tf.Session()
         self.actor = Actor(self.sess, self.env.observation_space.shape[0], 
                            self.env.action_space.n, self.config.trainer.lr)
-        self.critic = Critic(self.sess, self.env.observation_space.shape[0])
+        self.critic = Critic(self.sess, self.env.observation_space.shape[0],
+                            self.config.trainer.lr)
         self.build_model()
 
     def build_model(self):
@@ -160,9 +161,10 @@ class Actor:
         logger.info(f"Episode {i}, Actor loss = {-cost:.2f}")
 
 class Critic:
-    def __init__(self, sess, n_features):
+    def __init__(self, sess, n_features, lr):
         self.sess = sess
         self.n_features = n_features
+        self.lr = lr
         self.model = None
 
     def build_model(self):
@@ -172,12 +174,12 @@ class Critic:
             inputs=self.s,
             units=1,    # output units
             activation=None,   # get action probabilities
-            kernel_initializer=tf.random_normal_initializer(0., 0.1),  # weights
-            bias_initializer=tf.constant_initializer(0.1),  # biases
+            kernel_initializer=tf.random_normal_initializer(0., 0.0001),  # weights
+            bias_initializer=tf.constant_initializer(0.0001),  # biases
             name='value'
         ))
         self.cost = tf.reduce_mean(tf.losses.mean_squared_error(self.td_targets, self.value))
-        self.optimizer = tf.train.AdamOptimizer().minimize(self.cost)
+        self.optimizer = tf.train.AdamOptimizer(0.0001).minimize(self.cost)
 
     def value_of(self, state):
         v = self.sess.run(self.value, feed_dict={self.s: state})

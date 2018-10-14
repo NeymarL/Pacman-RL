@@ -41,7 +41,8 @@ def main(config: Config):
     
     weight_path = config.resource.weight_path
     if os.path.exists(weight_path) or \
-        config.controller.controller_type == ControllerType.REINFORCE:
+        config.controller.controller_type == ControllerType.REINFORCE or \
+        config.controller.controller_type == ControllerType.ActorCritic:
         controller.load(weight_path)
     else:
         controller.save(weight_path)
