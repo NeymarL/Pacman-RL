@@ -121,7 +121,7 @@ optional arguments:
 **Note**: You shold pick a very small `lr` to train a decent model, e.g. `lr = 0.00001`
 ![learning curve](graph/reinforce/reinforce.png)
 
-### Actor-Critic policy gradient
+### Advantage Actor-Critic
 
 * Actor
   * Softmax policy with a fc layer
