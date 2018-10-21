@@ -1,6 +1,6 @@
 # Pacman-RL
 
-Implement some classic reinforcement learning algorithms, test and visualize on Pacman under [OpenAI's Gym](https://gym.openai.com/) environment.
+Implement some reinforcement learning algorithms, test and visualize on Pacman under [OpenAI's Gym](https://gym.openai.com/) environment.
 
 ## Requirements
 
@@ -133,3 +133,7 @@ optional arguments:
   * Value function approximation: a fully connected layer (input layer and output layer with no hidden layer)
 
 ![learning curve](graph/actorcritic/actorcritic.png)
+
+### Asynchronous Advantage Actor-Critic (A3C)
+
+![a3c](graph/a3c/algorithm.jpeg)

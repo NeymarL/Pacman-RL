@@ -4,3 +4,5 @@ numpy
 matplotlib
 gym
 mujoco_py
+torch=0.4.1
+torchvision=0.1.9

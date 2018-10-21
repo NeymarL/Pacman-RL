@@ -38,7 +38,7 @@ def main(config: Config):
     try:
         controller = controller_dict[config.controller.controller_type](
             env, config)
-    except KeyError as e:
+    except KeyError:
         raise NotImplementedError
 
     weight_path = config.resource.weight_path
@@ -91,7 +91,7 @@ def train(config, env, controller):
         batch_rewards = []
         futures = []
         with ThreadPoolExecutor(max_workers=config.controller.max_workers) as executor:
-            for j in range(batch_size):
+            for _ in range(batch_size):
                 futures.append(executor.submit(simulation, copy.deepcopy(
                     env), controller, config.controller.epsilon))
             for future in as_completed(futures):
@@ -130,7 +130,7 @@ def simulation(env, controller, epsilon):
         state = np.expand_dims(observation, axis=0)
         action = controller.action(state, epsilon=epsilon)
         history.append((observation, action))
-        observation, reward, done, info = env.step(action)
+        observation, reward, done, _ = env.step(action)
         rewards.append(reward)
     return (history, rewards)
 
@@ -193,7 +193,7 @@ def eval(controller, env, config, i):
             Q = 0
         else:
             action, Q = controller.action(state, predict=True, return_q=True)
-        observation, reward, done, info = env.step(action)
+        observation, reward, done, _ = env.step(action)
         total_reward += reward
         rewards.append(reward)
         maxQ = np.max(Q)

@@ -18,6 +18,7 @@ class ControllerType(Enum):
     Q_learning = 3
     REINFORCE = 4
     ActorCritic = 5
+    A3C = 6
 
 
 class Config:
@@ -52,6 +53,7 @@ class TrainerConfig:
         self.evaluate_interval = 500
         self.lr = 0.0001
         self.evaluate_episodes = 100
+        self.t_max = 200
 
     def __setattr__(self, name, value):
         self.__dict__[name] = value
