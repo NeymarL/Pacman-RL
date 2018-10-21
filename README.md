@@ -10,6 +10,8 @@ Implement some reinforcement learning algorithms, test and visualize on Pacman u
 * tensorflow
 * keras
 * mujoco_py (if you want to save replay)
+* torch
+* torchvision
 
 ## Run
 
@@ -18,13 +20,13 @@ Implement some reinforcement learning algorithms, test and visualize on Pacman u
 
 ```
 Full usage: run.py [-h]
-              [--controller {MC,Sarsa,Sarsa_lambda,Q_learning,REINFORCE,ActorCritic}]
+              [--controller {MC,Sarsa,Sarsa_lambda,Q_learning,REINFORCE,ActorCritic,A3C}]
               [--render] [--save_replay] [--save_plot] [--show_plot]
               [--num_episodes NUM_EPISODES] [--batch_size BATCH_SIZE]
               [--eva_interval EVA_INTERVAL]
               [--evaluate_episodes EVALUATE_EPISODES] [--lr LR]
               [--epsilon EPSILON] [--gamma GAMMA] [--lam LAM] [--forward]
-              [--max_workers MAX_WORKERS]
+              [--max_workers MAX_WORKERS] [--t_max T_MAX]
               {train,evaluate}
 
 positional arguments:
@@ -32,7 +34,7 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --controller {MC,Sarsa,Sarsa_lambda,Q_learning,REINFORCE,ActorCritic}
+  --controller {MC,Sarsa,Sarsa_lambda,Q_learning,REINFORCE,ActorCritic,A3C}
                         choose an algorithm (controller)
   --render              set to render the env when evaluate
   --save_replay         set to save replay
@@ -53,6 +55,7 @@ optional arguments:
   --forward             set to use forward-view sarsa(lambda)
   --max_workers MAX_WORKERS
                         set max workers to train
+  --t_max T_MAX         set simulate how many timesteps until update param
 ```
 
 ![sample1](graph/sample1.gif)
