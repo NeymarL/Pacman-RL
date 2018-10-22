@@ -115,7 +115,6 @@ def train(config: Config, shared_model, rank):
                                        shared_model.parameters()):
             shared_param._grad = param.grad
         optimizer.step()
-        controller.optimzer.step()
         if done:
             time_diff = time.time() - start_time
             print(f"Process {rank} finish one episode in {time_diff:.2f}s.")
@@ -136,6 +135,7 @@ def evaluate(config: Config, shared_model):
         env = Monitor(env, config.resource.replay_dir, force=True)
     controller = A3CControl(env, config)
     max_reward = 0
+    rewards = []
     while True:
         start_time = time.time()
         controller.model.load_state_dict(shared_model.state_dict())
@@ -144,6 +144,8 @@ def evaluate(config: Config, shared_model):
             mean_reward += _evaluate(controller, env, config, i)
             i += 1
         mean_reward /= config.trainer.evaluate_episodes
+        rewards.append(mean_reward)
+        _plot_learning_curve(rewards, config)
         cur_time = time.strftime("%Hh %Mm %Ss",
                                  time.gmtime(time.time() - start_time))
         print(f"Time {cur_time}, Mean reward = {mean_reward}")
@@ -156,6 +158,15 @@ def evaluate(config: Config, shared_model):
             time.sleep(60)
         else:
             break
+
+
+def _plot_learning_curve(rewards, config):
+    plt.plot(range(len(rewards)), rewards, 'g-')
+    plt.title('Learning Curve')
+    plt.xlabel('Time')
+    plt.ylabel('Mean Reward')
+    plt.legend([config.controller.controller_type.name], loc='best')
+    plt.savefig(f"{config.resource.graph_dir}/learning_curve.png")
 
 
 def _evaluate(controller, env, config, i):

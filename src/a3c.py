@@ -28,7 +28,7 @@ class A3CControl():
             self.env.observation_space.shape[2],
             self.env.action_space.n,
         )
-        self.optimzer = optim.RMSprop(self.model.parameters(), lr=self.lr)
+        self.optimizer = optim.RMSprop(self.model.parameters(), lr=self.lr)
         self.hx = None
         self.cx = None
 
@@ -49,6 +49,8 @@ class A3CControl():
         state = state.view(
             1, self.input_shape[2], self.input_shape[0], self.input_shape[1])
         state = state.type(torch.FloatTensor)
+        self.cx = Variable(self.cx.data)
+        self.hx = Variable(self.hx.data)
         # inference
         value, logit, (self.hx, self.cx) = self.model(
             (Variable(state), (self.hx, self.cx)))
@@ -72,9 +74,6 @@ class A3CControl():
             log_probs = [p1, p2, ..., p_t-1]
             entropies = [e1, e2, ..., e_t-1]
             R: 0 for terminal s_t otherwise V(s_t)
-
-        Returns:
-            loss
         '''
         R = Variable(R)
         value_loss = Variable(torch.zeros(1, 1), requires_grad=True)
@@ -87,10 +86,9 @@ class A3CControl():
                 (log_probs[t] * td_error + 0.01 * entropies[t])
             # minimize
             value_loss = value_loss + 0.5 * td_error.pow(2)
-        self.optimzer.zero_grad()
+        self.optimizer.zero_grad()
         loss = policy_loss + 0.5 * value_loss
-        loss.backward(retain_graph=True)
-        self.optimzer.step()
+        loss.backward()
 
     def refresh_state(self):
         self.cx = Variable(torch.zeros(1, 256))
