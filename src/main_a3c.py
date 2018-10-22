@@ -200,7 +200,7 @@ def _evaluate(controller, env, config, i):
         observation, reward, done, _ = env.step(action)
         total_reward += reward
         rewards.append(reward)
-        values.append(value * 50)
+        values.append(value)
         if config.show_plot or config.save_plot:
             if max_val < max(reward, value):
                 max_val = max(reward, value)

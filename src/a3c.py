@@ -63,7 +63,7 @@ class A3CControl():
         if training:
             return action, value, log_prob, entropy
         else:
-            return action, value
+            return action, value.data.numpy()[0][0]
 
     def update(self, rewards, values, log_probs, entropies, R):
         '''
