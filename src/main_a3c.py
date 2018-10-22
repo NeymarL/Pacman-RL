@@ -113,6 +113,8 @@ def train(config: Config, shared_model, rank):
         optimizer.zero_grad()
         for param, shared_param in zip(controller.model.parameters(),
                                        shared_model.parameters()):
+            if shared_param.grad is not None:
+                break
             shared_param._grad = param.grad
         optimizer.step()
         if done:
@@ -136,19 +138,22 @@ def evaluate(config: Config, shared_model):
     controller = A3CControl(env, config)
     max_reward = 0
     rewards = []
+    evaluate_episodes = config.trainer.evaluate_episodes
     while True:
         start_time = time.time()
+        # synchronous local model and global model
         controller.model.load_state_dict(shared_model.state_dict())
         i, mean_reward = 0, 0
-        while i < config.trainer.evaluate_episodes:
+        while i < evaluate_episodes:
             mean_reward += _evaluate(controller, env, config, i)
             i += 1
-        mean_reward /= config.trainer.evaluate_episodes
+        mean_reward /= evaluate_episodes
         rewards.append(mean_reward)
         _plot_learning_curve(rewards, config)
         cur_time = time.strftime("%Hh %Mm %Ss",
                                  time.gmtime(time.time() - start_time))
-        print(f"Time {cur_time}, Mean reward = {mean_reward}")
+        print(f"Evaluate {evaluate_episodes} episodes: \
+            Time {cur_time}, Mean reward = {mean_reward}")
         if config.train:
             if mean_reward > max_reward:
                 max_reward = mean_reward
