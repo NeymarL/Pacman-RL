@@ -49,7 +49,6 @@ def main(config: Config):
             processes.append(p)
             time.sleep(0.1)
         for p in processes:
-            time.sleep(0.1)
             p.join()
     elif config.evaluate:
         evaluate(config, shared_model)
@@ -108,13 +107,11 @@ def train(config: Config, shared_model, rank):
         if not done:
             _, value, _, _ = controller.action(observation, training=True)
             R = value.data
+        optimizer.zero_grad()
         controller.update(rewards, values, log_probs, entropies, R)
         # synchronous update global model and local model
-        optimizer.zero_grad()
         for param, shared_param in zip(controller.model.parameters(),
                                        shared_model.parameters()):
-            if shared_param.grad is not None:
-                break
             shared_param._grad = param.grad
         optimizer.step()
         if done:
@@ -143,6 +140,7 @@ def evaluate(config: Config, shared_model):
         start_time = time.time()
         # synchronous local model and global model
         controller.model.load_state_dict(shared_model.state_dict())
+        controller.model.eval()
         i, mean_reward = 0, 0
         while i < evaluate_episodes:
             mean_reward += _evaluate(controller, env, config, i)
@@ -152,8 +150,8 @@ def evaluate(config: Config, shared_model):
         _plot_learning_curve(rewards, config)
         cur_time = time.strftime("%Hh %Mm %Ss",
                                  time.gmtime(time.time() - start_time))
-        print(f"Evaluate {evaluate_episodes} episodes: \
-            Time {cur_time}, Mean reward = {mean_reward}")
+        print(f"Evaluate {evaluate_episodes} episodes: "
+              f"Time {cur_time}, Mean reward = {mean_reward}")
         if config.train:
             if mean_reward > max_reward:
                 max_reward = mean_reward

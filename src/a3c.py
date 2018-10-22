@@ -53,7 +53,7 @@ class A3CControl():
         self.hx = Variable(self.hx.data)
         # inference
         value, logit, (self.hx, self.cx) = self.model(
-            (Variable(state), (self.hx, self.cx)))
+            (state, (self.hx, self.cx)))
         prob = F.softmax(logit, dim=1)
         log_prob = F.log_softmax(logit, dim=1)
         entropy = -(log_prob * prob).sum(1)
@@ -75,9 +75,8 @@ class A3CControl():
             entropies = [e1, e2, ..., e_t-1]
             R: 0 for terminal s_t otherwise V(s_t)
         '''
-        R = Variable(R)
-        value_loss = Variable(torch.zeros(1, 1), requires_grad=True)
-        policy_loss = Variable(torch.zeros(1, 1), requires_grad=True)
+        value_loss = 0
+        policy_loss = 0
         for t in reversed(range(len(rewards))):
             R = self.gamma * R + rewards[t]
             td_error = R - values[t]
