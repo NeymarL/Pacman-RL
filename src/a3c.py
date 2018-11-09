@@ -81,10 +81,12 @@ class A3CControl():
             R = self.gamma * R + rewards[t]
             td_error = R - values[t]
             # maximize return
+            with torch.no_grad():
+                advantage = td_error
             policy_loss = policy_loss - \
-                (log_probs[t] * td_error + 0.01 * entropies[t])
+                (log_probs[t] * advantage + 0.01 * entropies[t])
             # minimize
-            value_loss = value_loss + 0.5 * td_error.pow(2)
+            value_loss = value_loss + td_error.pow(2)
         self.optimizer.zero_grad()
         loss = policy_loss + 0.5 * value_loss
         loss.backward()
