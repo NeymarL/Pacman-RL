@@ -140,3 +140,5 @@ optional arguments:
 ### Asynchronous Advantage Actor-Critic (A3C)
 
 ![a3c](graph/a3c/algorithm.jpeg)
+
+![a3c](graph/a3c/a3c.png)
