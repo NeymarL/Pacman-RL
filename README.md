@@ -142,3 +142,8 @@ optional arguments:
 ![a3c](graph/a3c/algorithm.jpeg)
 
 ![a3c](graph/a3c/a3c.png)
+
+### Trust Region Policy Optimization (TRPO)
+
+![trpo](graph/trpo.png)
+**Note**: Running with OpenAI [Spinning Up](https://github.com/openai/spinningup), TRPO is not implemented in this repo.
