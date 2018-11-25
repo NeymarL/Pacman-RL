@@ -17,7 +17,7 @@ from src.sarsa_lambda import SarsaLambdaControl
 from src.q_learning import QlearningControl
 from src.reinforce import ReinforceControl
 from src.actor_critic import ActorCriticControl
-
+from src.ppo import PPOControl
 
 logger = getLogger(__name__)
 
@@ -33,7 +33,8 @@ def main(config: Config):
         ControllerType.Sarsa_lambda: SarsaLambdaControl,
         ControllerType.Q_learning: QlearningControl,
         ControllerType.REINFORCE: ReinforceControl,
-        ControllerType.ActorCritic: ActorCriticControl
+        ControllerType.ActorCritic: ActorCriticControl,
+        ControllerType.PPO: PPOControl
     }
 
     try:
@@ -45,7 +46,8 @@ def main(config: Config):
     weight_path = config.resource.weight_path
     if os.path.exists(weight_path) or \
             config.controller.controller_type == ControllerType.REINFORCE or \
-            config.controller.controller_type == ControllerType.ActorCritic:
+            config.controller.controller_type == ControllerType.ActorCritic or \
+            config.controller.controller_type == ControllerType.PPO:
         controller.load(weight_path)
     else:
         controller.save(weight_path)
@@ -78,14 +80,16 @@ def train(config, env, controller):
             current_reward = evaluate_parallel(config, env, controller)
             if len(total_rewards) > 0 and (current_reward > max(total_rewards)):
                 controller.save(config.resource.weight_path)
-            if len(total_rewards) == 0 or current_reward >= max(total_rewards):
-                total_rewards.append(current_reward)
-                indexes.append(i)
+            total_rewards.append(current_reward)
+            indexes.append(i)
             if current_reward < last_reward:
                 fail_count += 1
-                if fail_count >= 5:
+                if fail_count >= 3:
                     break
+            else:
+                fail_count = 0
             last_reward = current_reward
+            save_plot(indexes, total_rewards, config)
 
         starttime = time()
         batch_buffers = []
@@ -103,18 +107,21 @@ def train(config, env, controller):
             config.controller.epsilon *= 0.999 ** batch_size
         endtime = time()
         logger.info(
-            f"Episode {i} Observing Finished, {(endtime - starttime):.2f}s")
+            f"Episode {i} Observe Finished, {(endtime - starttime):.2f}s")
         starttime = time()
         controller.train(batch_buffers, i)
         endtime = time()
         logger.info(
-            f"Episode {i} Learning Finished, {(endtime - starttime):.2f}s")
+            f"Episode {i} Learning Finished, {(endtime - starttime):.2f}s\n")
+    save_plot(indexes, total_rewards, config)
 
+
+def save_plot(indexes, total_rewards, config):
     plt.plot(indexes, total_rewards, 'g-')
     plt.title('Learning Curve')
     plt.xlabel('Episodes')
     plt.ylabel('Mean Reward')
-    plt.legend((config.controller.controller_type.name), loc='best')
+    plt.legend(config.controller.controller_type.name, loc='best')
     plt.savefig(f"{config.resource.graph_dir}/learn_curve.png")
     logger.info(
         f"Learning curve saved as {config.resource.graph_dir}/learn_curve.png")
@@ -126,7 +133,7 @@ def simulation(env, controller, epsilon):
     buf = Buffer()
     while not done:
         state = np.expand_dims(observation, axis=0)
-        if type(controller) == ControllerType.PPO:
+        if type(controller) == PPOControl:
             (action, logp), v = controller.action(
                 state, return_q=True)
         else:
@@ -134,7 +141,7 @@ def simulation(env, controller, epsilon):
             logp = None
             v = [None]
         new_ob, reward, done, _ = env.step(action)
-        buf.add(observation, action, reward, v[0], logp)
+        buf.add(observation, action, reward, v[0][0], logp)
         observation = new_ob
     return buf
 
@@ -152,7 +159,7 @@ def evaluate(config, env, controller):
 
 
 def evaluate_parallel(config, env, controller):
-    logger.info("Evaluating...")
+    logger.info("\nEvaluating...")
     mean_reward = 0
     i = 0
     futures = []
@@ -164,7 +171,7 @@ def evaluate_parallel(config, env, controller):
         for future in as_completed(futures):
             mean_reward += future.result()
     mean_reward /= config.trainer.evaluate_episodes
-    logger.info(f"Mean reward = {mean_reward}")
+    logger.info(f"Mean reward = {mean_reward}\n")
     return mean_reward
 
 

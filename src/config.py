@@ -87,7 +87,9 @@ class ResourceConfig:
         self.log_path = os.path.join(self.project_dir, 'main.log')
 
     def set_path(self, controller_type):
-        if controller_type == ControllerType.REINFORCE or controller_type == ControllerType.ActorCritic:
+        if controller_type == ControllerType.REINFORCE or \
+                controller_type == ControllerType.ActorCritic or\
+                controller_type == ControllerType.PPO:
             self.weight_path = os.path.join(
                 self.weight_dir, controller_type.name.lower())
             if not os.path.exists(self.weight_path):

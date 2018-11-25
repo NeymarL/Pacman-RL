@@ -64,6 +64,7 @@ def start():
     else:
         config.train = False
         config.evaluate = True
+    print("\n===============================================================")
     config.render = args.render
     config.save_replay = args.save_replay
     config.show_plot = args.show_plot
@@ -79,4 +80,5 @@ def start():
     config.controller.forward = args.forward
     config.controller.max_workers = args.max_workers
     config.trainer.t_max = args.t_max
+    print("===============================================================\n")
     main(config)

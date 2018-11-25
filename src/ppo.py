@@ -10,7 +10,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from src.base import BaseController
-from src.util import discount_cumsum
+from src.util import discount_cumsum, mlp
 from src.config import Config, ControllerType
 
 logger = getLogger(__name__)
@@ -23,13 +23,14 @@ class PPOControl(BaseController):
         self.epsilon = config.controller.epsilon    # clip ratio
         self.gamma = config.controller.gamma
         self.lam = config.controller.lambda_
-        self.lr = config.trainer.lr
+        self.pi_lr = 3e-4
+        self.v_lr = 1e-3
         self.max_workers = config.controller.max_workers
         self.sess = tf.Session()
         self.actor = PPOActor(self.sess, self.env.observation_space.shape[0],
-                              self.env.action_space.n, self.config.trainer.lr, self.epsilon)
+                              self.env.action_space.n, self.pi_lr, self.epsilon)
         self.critic = PPOCritic(self.sess, self.env.observation_space.shape[0],
-                                self.config.trainer.lr)
+                                self.v_lr)
         self.build_model()
 
     def build_model(self):
@@ -43,40 +44,46 @@ class PPOControl(BaseController):
             return self.actor.action(observation), [v]
         return self.actor.action(observation)[0]
 
-    def train(self, batch_history, batch_rewards, batch_values, i):
+    def train(self, batch_buffers, i):
         '''Update parameters
 
         Args:
-            batch_history = [[(s1, a1), (s2, a2), ...,(sT-1, aT-1)], ...]
-            batch_rewards = [[r2, r3, ..., rT], ...]
-            batch_values = [[v1, v2, ..., vT-1], ...]
+            batch_buffers = [buf1, buf2, ...]
         '''
         batch_states = []
         batch_actions = []
         batch_rets = []
         batch_advs = []
+        batch_logp_old = []
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            futures = [executor.submit(self.build_training_set, history, rewards, values)
-                       for history, rewards, values in
-                       zip(batch_history, batch_rewards, batch_values)]
+            futures = [executor.submit(self.build_training_set, buf)
+                       for buf in batch_buffers]
             for future in futures:
-                states, actions, returns, advantages = future.result()
+                states, actions, returns, advantages, logps = future.result()
                 batch_states.extend(states)
                 batch_actions.extend(actions)
                 batch_rets.extend(returns)
                 batch_advs.extend(advantages)
+                batch_logp_old.extend(logps)
 
-        self.actor.train(batch_states, batch_actions, batch_advs, i)
+        self.actor.train(batch_states, batch_actions,
+                         batch_advs, batch_logp_old, i)
         self.critic.train(batch_states, batch_rets, i)
 
-    def build_training_set(self, history, rewards, values):
-        states = [x[0] for x in history]
-        actions = [x[1] for x in history]
-        rewards_to_go = discount_cumsum(rewards, self.gamma)
+    def build_training_set(self, buf):
+        rewards_to_go = discount_cumsum(buf.rewards, self.gamma)
+        buf.values = np.array(buf.values)
         # compute GAE
-        deltas = rewards[:-1] + self.gamma * values[1:] - values[:-1]
+        deltas = buf.rewards[:-1] + self.gamma * \
+            buf.values[1:] - buf.values[:-1]
         advs = discount_cumsum(deltas, self.gamma * self.lam)
-        return states, actions, rewards_to_go, advs
+        # advantage normalization trick
+        adv_mean, adv_std = np.mean(advs), np.std(advs)
+        advs = (advs - adv_mean) / adv_std
+        # squeeze
+        actions = np.squeeze(buf.actions)
+        logps = np.squeeze(buf.logps)
+        return buf.states[:-1], actions[:-1], rewards_to_go[:-1], advs, logps[:-1]
 
     def save(self, path):
         saver = tf.train.Saver()
@@ -99,28 +106,34 @@ class PPOActor:
         self.n_actions = n_actions
         self.lr = lr
         self.epsilon = epsilon
+        self.train_policy_iter = 80
+        self.target_kl = 0.01
 
     def build_model(self):
+        clip_ratio = self.epsilon
         # Input placeholder
-        self.s = tf.placeholder(tf.float32, [None, self.n_features])
-        self.a = tf.placeholder(tf.int32, [None, 1])
-        self.td_error = tf.placeholder(tf.float32, [None])
+        self.s_ph = tf.placeholder(tf.float32, [None, self.n_features])
+        self.a_ph = tf.placeholder(tf.int32, [None])
+        self.logp_old_ph = tf.placeholder(tf.float32, [None])
+        self.adv_ph = tf.placeholder(tf.float32, [None])
         # Construct model
-        self.acts_prob = tf.layers.dense(
-            inputs=self.s,
-            units=self.n_actions,    # output units
-            activation=tf.nn.softmax,   # get action probabilities
-            kernel_initializer=tf.random_normal_initializer(
-                0., 0.0001),  # weights
-            bias_initializer=tf.constant_initializer(0.0001),  # biases
-            name='acts_prob'
-        )
-        # cost = log(pi(s_t, a_t)) * TD_error
-        self.logp = tf.log(self.acts_prob)
-        log_prob = tf.squeeze(
-            tf.log(tf.batch_gather(self.acts_prob, self.a)))
-        self.cost = tf.reduce_mean(tf.multiply(self.td_error, log_prob))
-        self.optimizer = tf.train.AdamOptimizer(self.lr).minimize(-self.cost)
+        logits = mlp(self.s_ph, [64, 64, self.n_actions], tf.tanh)
+        self.logp_all = tf.nn.log_softmax(logits)
+        self.pi = tf.squeeze(tf.multinomial(logits, 1), axis=1)
+        self.logp_pi = tf.reduce_sum(tf.one_hot(
+            self.pi, depth=self.n_actions) * self.logp_all, axis=1)
+        logp = tf.reduce_sum(tf.one_hot(
+            self.a_ph, depth=self.n_actions) * self.logp_all, axis=1)
+        # PPO objectives
+        # pi(a|s) / pi_old(a|s)
+        ratio = tf.exp(logp - self.logp_old_ph)
+        min_adv = tf.where(self.adv_ph > 0, (1+clip_ratio)
+                           * self.adv_ph, (1-clip_ratio)*self.adv_ph)
+        self.pi_loss = - \
+            tf.reduce_mean(tf.minimum(ratio * self.adv_ph, min_adv))
+        self.approx_kl = tf.reduce_mean(self.logp_old_ph - logp)
+        self.approx_ent = tf.reduce_mean(-logp)
+        self.optimizer = tf.train.AdamOptimizer(self.lr).minimize(self.pi_loss)
 
     def action(self, observation):
         '''
@@ -132,27 +145,41 @@ class PPOActor:
         Return:
             The action choosed according to softmax policy
         '''
-        probs, logp = self.sess.run(
-            [self.acts_prob, self.logp], feed_dict={self.s: observation})
-        my_action = int(np.random.choice(
-            range(self.n_actions), p=probs.ravel()))
+        my_action, logp = self.sess.run(
+            [self.pi, self.logp_pi], feed_dict={self.s_ph: observation})
         return my_action, logp
 
-    def train(self, batch_states, batch_actions, batch_tderror, i):
+    def train(self, states, actions, advs, logp_old, i):
         '''Update parameters
 
         Args:
-            batch_states = [s1, s2, ..., sn]
-            batch_actions = [a1, a2, ..., an]
-            batch_tderror = [e1, e2, ..., en]
+            states = [s1, s2, ..., sn]
+            actions = [a1, a2, ..., an]
+            advs = [adv1, adv2, ..., advn]
+            logp_old = [logp1, logp2, ..., logpn]
             i: episode number
         '''
-        batch_actions = np.asarray(batch_actions)
-        batch_actions = np.expand_dims(batch_actions, axis=1)
-        _, cost = self.sess.run([self.optimizer, self.cost], feed_dict={self.td_error: batch_tderror,
-                                                                        self.s: batch_states,
-                                                                        self.a: batch_actions})
-        logger.info(f"Episode {i}, Actor loss = {-cost:.2f}")
+        inputs = {
+            self.s_ph: states,
+            self.a_ph: actions,
+            self.adv_ph: advs,
+            self.logp_old_ph: logp_old
+        }
+        pi_loss_old, ent = self.sess.run(
+            [self.pi_loss, self.approx_ent], feed_dict=inputs)
+        for j in range(self.train_policy_iter):
+            _, kl = self.sess.run(
+                [self.optimizer, self.approx_kl], feed_dict=inputs)
+            kl = kl.mean()
+            if kl > 1.5 * self.target_kl:
+                logger.info(
+                    'Early stopping at step %d due to reaching max kl.' % j)
+                break
+        pi_loss_new, kl = self.sess.run(
+            [self.pi_loss, self.approx_kl], feed_dict=inputs)
+        logger.info(
+            f"\nEpisode {i}:\n\tLoss_pi: {pi_loss_old:.2f}\n\tEntropy: {ent:.2f}\n\t"
+            f"KL: {kl:.2f}\n\tDelta_Loss: {(pi_loss_new - pi_loss_old):.2f}")
 
 
 class PPOCritic:
@@ -161,28 +188,27 @@ class PPOCritic:
         self.n_features = n_features
         self.lr = lr
         self.model = None
+        self.train_value_iter = 80
 
     def build_model(self):
-        self.s = tf.placeholder(tf.float32, [None, self.n_features])
-        self.td_targets = tf.placeholder(tf.float32, [None])
-        self.value = tf.squeeze(tf.layers.dense(
-            inputs=self.s,
-            units=1,    # output units
-            activation=None,   # get action probabilities
-            kernel_initializer=tf.random_normal_initializer(
-                0., 0.0001),  # weights
-            bias_initializer=tf.constant_initializer(0.0001),  # biases
-            name='value'
-        ))
-        self.cost = tf.reduce_mean(
-            tf.losses.mean_squared_error(self.td_targets, self.value))
-        self.optimizer = tf.train.AdamOptimizer(0.0001).minimize(self.cost)
+        self.s_ph = tf.placeholder(tf.float32, [None, self.n_features])
+        self.ret_ph = tf.placeholder(tf.float32, [None])
+        self.value = tf.squeeze(
+            mlp(self.s_ph, [64, 64, 1], tf.tanh, None), axis=1)
+        self.v_loss = tf.reduce_mean(
+            tf.losses.mean_squared_error(self.ret_ph, self.value))
+        self.optimizer = tf.train.AdamOptimizer(self.lr).minimize(self.v_loss)
 
     def value_of(self, state):
-        v = self.sess.run(self.value, feed_dict={self.s: state})
+        v = self.sess.run(self.value, feed_dict={self.s_ph: state})
         return v
 
-    def train(self, batch_states, batch_tdtargets, i):
-        _, cost = self.sess.run([self.optimizer, self.cost], feed_dict={self.s: batch_states,
-                                                                        self.td_targets: batch_tdtargets})
-        logger.info(f"Episode {i}, Critic loss = {cost:.2f}")
+    def train(self, states, rets, i):
+        inputs = {
+            self.s_ph: states,
+            self.ret_ph: rets
+        }
+        for _ in range(self.train_value_iter):
+            _, loss = self.sess.run(
+                [self.optimizer, self.v_loss], feed_dict=inputs)
+        print(f"\tLoss_v = {loss:.2f}")

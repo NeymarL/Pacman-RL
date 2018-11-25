@@ -20,7 +20,7 @@ Implement some reinforcement learning algorithms, test and visualize on Pacman u
 
 ```
 Full usage: run.py [-h]
-              [--controller {MC,Sarsa,Sarsa_lambda,Q_learning,REINFORCE,ActorCritic,A3C}]
+              [--controller {MC,Sarsa,Sarsa_lambda,Q_learning,REINFORCE,ActorCritic,A3C,PPO}]
               [--render] [--save_replay] [--save_plot] [--show_plot]
               [--num_episodes NUM_EPISODES] [--batch_size BATCH_SIZE]
               [--eva_interval EVA_INTERVAL]
@@ -34,7 +34,7 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --controller {MC,Sarsa,Sarsa_lambda,Q_learning,REINFORCE,ActorCritic,A3C}
+  --controller {MC,Sarsa,Sarsa_lambda,Q_learning,REINFORCE,ActorCritic,A3C,PPO}
                         choose an algorithm (controller)
   --render              set to render the env when evaluate
   --save_replay         set to save replay
@@ -147,3 +147,15 @@ optional arguments:
 
 ![trpo](graph/trpo.png)
 **Note**: Running with OpenAI [Spinning Up](https://github.com/openai/spinningup), TRPO is not implemented in this repo.
+
+### Proximal Policy Optimization (PPO)
+
+![algo](graph/ppo/ppo_argo.svg)
+
+Run with:
+
+```bash
+python run.py --controller PPO --max_worker 6 --gamma 0.99 --evaluate_episodes 50 --batch_size 20 --epsilon 0.2 --lam 0.97 --eva_interval 100 train
+```
+
+![ppo](graph/ppo/ppo.png)
