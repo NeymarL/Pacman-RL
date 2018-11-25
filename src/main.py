@@ -84,7 +84,7 @@ def train(config, env, controller):
             indexes.append(i)
             if current_reward < last_reward:
                 fail_count += 1
-                if fail_count >= 3:
+                if fail_count >= 5:
                     break
             else:
                 fail_count = 0
