@@ -13,6 +13,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Flatten
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from src.util import Buffer
 from src.base import BaseController
 from src.config import Config, ControllerType
 
@@ -28,14 +29,15 @@ class MonteCarloControl(BaseController):
         self.model = self.build_model()
         self.max_workers = config.controller.max_workers
 
-    def build_training_set(self, history, rewards):
+    def build_training_set(self, buf):
         '''Monte-Carlo evaluation
 
         Q(s, a) <- Q(s, a) + (G - Q(s, a)) / N(s, a)
 
         Args:
-            history = [(s1, a1), (s2, a2), ...,(sT-1, aT-1)]
-            rewards = [r2, r3, ..., rT]
+            buf.states = [s1, s2, ..., sT-1]
+            buf.actions = [a1, a2, ..., aT-1]
+            buf.rewards = [r2, r3, ..., rT]
 
         Return:
             (inputs, targets): 
@@ -44,10 +46,10 @@ class MonteCarloControl(BaseController):
         '''
         N = defaultdict(int)
         Q = defaultdict(float)
-        for i, (s, a) in enumerate(history):
+        for i, (s, a) in enumerate(zip(buf.states, buf.actions)):
             s = tuple(s)
             N[(s, a)] += 1
-            G = self.compute_return(rewards, i)
+            G = self.compute_return(buf.rewards, i)
             Q[(s, a)] += (G - Q[(s, a)]) / N[(s, a)]
 
         data = defaultdict(list)

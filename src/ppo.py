@@ -1,7 +1,5 @@
-# Actor Critic Policy Gradient using advantage function
-#   Actor: 𝜽 = 𝜽 + 𝜶 𝝯log(pi(s_t, a_t)) * TD_error
-#   Critic: TD evaluation (estimate V(s))
-# Policy approximation: softmax policy
+# Proximal Policy Optimization
+# https://arxiv.org/abs/1707.06347
 
 import gym
 import numpy as np
@@ -11,26 +9,27 @@ from logging import getLogger
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from src.util import Buffer
 from src.base import BaseController
+from src.util import discount_cumsum
 from src.config import Config, ControllerType
 
 logger = getLogger(__name__)
 
 
-class ActorCriticControl(BaseController):
+class PPOControl(BaseController):
     def __init__(self, env, config: Config):
         self.env = env
         self.config = config
-        self.epsilon = config.controller.epsilon
+        self.epsilon = config.controller.epsilon    # clip ratio
         self.gamma = config.controller.gamma
+        self.lam = config.controller.lambda_
         self.lr = config.trainer.lr
         self.max_workers = config.controller.max_workers
         self.sess = tf.Session()
-        self.actor = Actor(self.sess, self.env.observation_space.shape[0],
-                           self.env.action_space.n, self.config.trainer.lr)
-        self.critic = Critic(self.sess, self.env.observation_space.shape[0],
-                             self.config.trainer.lr)
+        self.actor = PPOActor(self.sess, self.env.observation_space.shape[0],
+                              self.env.action_space.n, self.config.trainer.lr, self.epsilon)
+        self.critic = PPOCritic(self.sess, self.env.observation_space.shape[0],
+                                self.config.trainer.lr)
         self.build_model()
 
     def build_model(self):
@@ -38,58 +37,46 @@ class ActorCriticControl(BaseController):
         self.critic.build_model()
         self.sess.run(tf.global_variables_initializer())
 
-    def action(self, observation, predict=False, return_q=False, epsilon=None):
+    def action(self, observation, predict=False, return_q=False, epsilon=None, return_logp=True):
         if return_q:
             v = self.critic.value_of(observation)
             return self.actor.action(observation), [v]
-        return self.actor.action(observation)
+        return self.actor.action(observation)[0]
 
-    def train(self, batch_buffers, i):
+    def train(self, batch_history, batch_rewards, batch_values, i):
         '''Update parameters
 
         Args:
-            batch_buffers = [buf1, buf2, ...]
+            batch_history = [[(s1, a1), (s2, a2), ...,(sT-1, aT-1)], ...]
+            batch_rewards = [[r2, r3, ..., rT], ...]
+            batch_values = [[v1, v2, ..., vT-1], ...]
         '''
         batch_states = []
         batch_actions = []
-        batch_tdtargets = []
-        batch_tderror = []
+        batch_rets = []
+        batch_advs = []
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            futures = [executor.submit(self.build_training_set, buf)
-                       for buf in batch_buffers]
+            futures = [executor.submit(self.build_training_set, history, rewards, values)
+                       for history, rewards, values in
+                       zip(batch_history, batch_rewards, batch_values)]
             for future in futures:
-                states, actions, td_targets, td_errors = future.result()
+                states, actions, returns, advantages = future.result()
                 batch_states.extend(states)
                 batch_actions.extend(actions)
-                batch_tdtargets.extend(td_targets)
-                batch_tderror.extend(td_errors)
+                batch_rets.extend(returns)
+                batch_advs.extend(advantages)
 
-        self.actor.train(batch_states, batch_actions, batch_tderror, i)
-        self.critic.train(batch_states, batch_tdtargets, i)
+        self.actor.train(batch_states, batch_actions, batch_advs, i)
+        self.critic.train(batch_states, batch_rets, i)
 
-    def build_training_set(self, buf):
-        states = buf.states
-        actions = buf.actions
-        rewards = buf.rewards
-        td_targets = []
-        td_errors = []
-        V = defaultdict(float)
-        T = len(rewards)
-        for i, (s, r) in enumerate(zip(states, rewards)):
-            if i < T - 1:
-                s_ = states[i + 1]
-                if tuple(s_) not in V:
-                    V[tuple(s_)] = self.critic.value_of(
-                        np.expand_dims(s_, axis=0))
-                td_target = r + self.gamma * V[tuple(s_)]
-            else:
-                td_target = r
-            if tuple(s) not in V:
-                V[tuple(s)] = self.critic.value_of(np.expand_dims(s, axis=0))
-            td_error = td_target - V[tuple(s)]
-            td_targets.append(td_target)
-            td_errors.append(td_error)
-        return states, actions, td_targets, td_errors
+    def build_training_set(self, history, rewards, values):
+        states = [x[0] for x in history]
+        actions = [x[1] for x in history]
+        rewards_to_go = discount_cumsum(rewards, self.gamma)
+        # compute GAE
+        deltas = rewards[:-1] + self.gamma * values[1:] - values[:-1]
+        advs = discount_cumsum(deltas, self.gamma * self.lam)
+        return states, actions, rewards_to_go, advs
 
     def save(self, path):
         saver = tf.train.Saver()
@@ -105,12 +92,13 @@ class ActorCriticControl(BaseController):
             pass
 
 
-class Actor:
-    def __init__(self, sess, n_features, n_actions, lr):
+class PPOActor:
+    def __init__(self, sess, n_features, n_actions, lr, epsilon):
         self.sess = sess
         self.n_features = n_features
         self.n_actions = n_actions
         self.lr = lr
+        self.epsilon = epsilon
 
     def build_model(self):
         # Input placeholder
@@ -128,7 +116,9 @@ class Actor:
             name='acts_prob'
         )
         # cost = log(pi(s_t, a_t)) * TD_error
-        log_prob = tf.squeeze(tf.log(tf.batch_gather(self.acts_prob, self.a)))
+        self.logp = tf.log(self.acts_prob)
+        log_prob = tf.squeeze(
+            tf.log(tf.batch_gather(self.acts_prob, self.a)))
         self.cost = tf.reduce_mean(tf.multiply(self.td_error, log_prob))
         self.optimizer = tf.train.AdamOptimizer(self.lr).minimize(-self.cost)
 
@@ -142,10 +132,11 @@ class Actor:
         Return:
             The action choosed according to softmax policy
         '''
-        probs = self.sess.run(self.acts_prob, feed_dict={self.s: observation})
+        probs, logp = self.sess.run(
+            [self.acts_prob, self.logp], feed_dict={self.s: observation})
         my_action = int(np.random.choice(
             range(self.n_actions), p=probs.ravel()))
-        return my_action
+        return my_action, logp
 
     def train(self, batch_states, batch_actions, batch_tderror, i):
         '''Update parameters
@@ -164,7 +155,7 @@ class Actor:
         logger.info(f"Episode {i}, Actor loss = {-cost:.2f}")
 
 
-class Critic:
+class PPOCritic:
     def __init__(self, sess, n_features, lr):
         self.sess = sess
         self.n_features = n_features

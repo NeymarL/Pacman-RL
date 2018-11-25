@@ -13,6 +13,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Flatten
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from src.util import Buffer
 from src.base import BaseController
 from src.config import Config, ControllerType
 
@@ -28,14 +29,15 @@ class QlearningControl(BaseController):
         self.model = self.build_model()
         self.max_workers = config.controller.max_workers
 
-    def build_training_set(self, history, rewards):
+    def build_training_set(self, buf):
         '''Q-learning evaluation
 
         Q(s, a) <- Q(s, a) + 𝜶 * (R + 𝜸 maxQ(s', a') - Q(s, a))
 
         Args:
-            history = [(s1, a1), (s2, a2), ...,(sT-1, aT-1)]
-            rewards = [r2, r3, ..., rT]
+            buf.states = [s1, s2, ..., sT-1]
+            buf.actions = [a1, a2, ..., aT-1]
+            buf.rewards = [r2, r3, ..., rT]
 
         Return:
             (inputs, targets): 
@@ -43,17 +45,19 @@ class QlearningControl(BaseController):
                 targets contains lists of action-values for each state in inputs
         '''
         Q_ = dict()
+        history = [(s, a) for s, a in zip(buf.states, buf.actions)]
         his1 = history.copy()
         his2 = history
         del(his2[0])
         his2.append((0, 0))
-        inputs = np.zeros((len(rewards), ) + self.env.observation_space.shape)
-        targets = np.zeros((len(rewards), self.env.action_space.n))
+        inputs = np.zeros((len(buf.rewards), ) +
+                          self.env.observation_space.shape)
+        targets = np.zeros((len(buf.rewards), self.env.action_space.n))
 
-        for i, ((s, a), r, (s_, a_)) in enumerate(zip(his1, rewards, his2)):
+        for i, ((s, a), r, (s_, a_)) in enumerate(zip(his1, buf.rewards, his2)):
             inputs[i] = np.array(s)
             targets[i] = self.model.predict(np.expand_dims(inputs[i], axis=0))
-            if i + 1 == len(rewards):
+            if i + 1 == len(buf.rewards):
                 targets[i, a] = r
             else:
                 if tuple(s_) not in Q_:

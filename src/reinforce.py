@@ -11,6 +11,7 @@ from logging import getLogger
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from src.util import discount_cumsum, Buffer
 from src.base import BaseController
 from src.config import Config, ControllerType
 
@@ -71,15 +72,14 @@ class ReinforceControl(BaseController):
             range(self.env.action_space.n), p=probs.ravel()))
         return my_action
 
-    def train(self, batch_history, batch_rewards, i):
+    def train(self, batch_buffers, i):
         '''Update parameters
 
         Args:
-            batch_history = [[(s1, a1), (s2, a2), ...,(sT-1, aT-1)], ...]
-            batch_rewards = [[r2, r3, ..., rT], ...]
+            batch_buffers = [buf1, buf2, ...]
         '''
-        batch_states, batch_actions, batch_return = self.build_training_set_on_batch(batch_history,
-                                                                                     batch_rewards)
+        batch_states, batch_actions, batch_return = self.build_training_set_on_batch(
+            batch_buffers)
         batch_actions = np.asarray(batch_actions)
         batch_actions = np.expand_dims(batch_actions, axis=1)
         _, summary, cost = self.sess.run([self.optimizer, self.summary, self.cost], feed_dict={self.G: batch_return,
@@ -88,13 +88,13 @@ class ReinforceControl(BaseController):
         self.train_writer.add_summary(summary, i)
         logger.info(f"Episode {i}, logPi(s, a)G = {cost:.2f}")
 
-    def build_training_set_on_batch(self, batch_history, batch_rewards):
+    def build_training_set_on_batch(self, batch_buffers):
         batch_states = []
         batch_actions = []
         batch_return = []
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            futures = [executor.submit(self.build_training_set, history, rewards)
-                       for history, rewards in zip(batch_history, batch_rewards)]
+            futures = [executor.submit(self.build_training_set, buf)
+                       for buf in batch_buffers]
             for future in futures:
                 states, actions, returns = future.result()
                 batch_states.extend(states)
@@ -102,15 +102,9 @@ class ReinforceControl(BaseController):
                 batch_return.extend(returns)
         return batch_states, batch_actions, batch_return
 
-    def build_training_set(self, history, rewards):
-        states = []
-        actions = []
-        returns = []
-        for i in range(0, len(history), 2):
-            states.append(history[i][0])
-            actions.append(history[i][1])
-            returns.append(self.compute_return(rewards, i))
-        return states, actions, returns
+    def build_training_set(self, buf):
+        returns = discount_cumsum(buf.rewards, self.gamma)
+        return buf.states, buf.actions, returns
 
     def compute_return(self, rewards, t):
         '''Compute return G_t

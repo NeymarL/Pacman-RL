@@ -9,6 +9,7 @@ from logging import getLogger
 from gym.wrappers import Monitor
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from src.util import Buffer
 from src.config import Config, ControllerType
 from src.montecarlo import MonteCarloControl
 from src.sarsa import SarsaControl
@@ -87,17 +88,15 @@ def train(config, env, controller):
             last_reward = current_reward
 
         starttime = time()
-        batch_history = []
-        batch_rewards = []
+        batch_buffers = []
         futures = []
         with ThreadPoolExecutor(max_workers=config.controller.max_workers) as executor:
             for _ in range(batch_size):
                 futures.append(executor.submit(simulation, copy.deepcopy(
                     env), controller, config.controller.epsilon))
             for future in as_completed(futures):
-                history, rewards = future.result()
-                batch_history.append(history)
-                batch_rewards.append(rewards)
+                buf = future.result()
+                batch_buffers.append(buf)
         i += batch_size
         if config.controller.controller_type != ControllerType.REINFORCE:
             # epsilon decay
@@ -106,7 +105,7 @@ def train(config, env, controller):
         logger.info(
             f"Episode {i} Observing Finished, {(endtime - starttime):.2f}s")
         starttime = time()
-        controller.train(batch_history, batch_rewards, i)
+        controller.train(batch_buffers, i)
         endtime = time()
         logger.info(
             f"Episode {i} Learning Finished, {(endtime - starttime):.2f}s")
@@ -124,15 +123,20 @@ def train(config, env, controller):
 def simulation(env, controller, epsilon):
     done = False
     observation = env.reset()
-    history = []
-    rewards = []
+    buf = Buffer()
     while not done:
         state = np.expand_dims(observation, axis=0)
-        action = controller.action(state, epsilon=epsilon)
-        history.append((observation, action))
-        observation, reward, done, _ = env.step(action)
-        rewards.append(reward)
-    return (history, rewards)
+        if type(controller) == ControllerType.PPO:
+            (action, logp), v = controller.action(
+                state, return_q=True)
+        else:
+            action = controller.action(state, epsilon=epsilon)
+            logp = None
+            v = [None]
+        new_ob, reward, done, _ = env.step(action)
+        buf.add(observation, action, reward, v[0], logp)
+        observation = new_ob
+    return buf
 
 
 def evaluate(config, env, controller):
@@ -191,6 +195,8 @@ def eval(controller, env, config, i):
         if config.controller.controller_type == ControllerType.REINFORCE:
             action = controller.action(state)
             Q = 0
+        elif config.controller.controller_type == ControllerType.PPO:
+            (action, _), Q = controller.action(state, return_q=True)
         else:
             action, Q = controller.action(state, predict=True, return_q=True)
         observation, reward, done, _ = env.step(action)

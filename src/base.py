@@ -10,6 +10,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Flatten
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from src.util import Buffer
 from src.config import Config, ControllerType
 
 logger = getLogger(__name__)
@@ -56,18 +57,17 @@ class BaseController:
                     return (a, Q)
         return a
 
-    def train(self, batch_history, batch_rewards, i=None):
+    def train(self, batch_buffers, i=None):
         '''Update parameters
 
         Args:
-            batch_history = [[(s1, a1), (s2, a2), ...,(sT-1, aT-1)], ...]
-            batch_rewards = [[r2, r3, ..., rT], ...]
+            batch_buffers = [buf1, buf2, ...]
         '''
         x = None
         y = None
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            futures = [executor.submit(self.build_training_set, history, rewards)
-                       for history, rewards in zip(batch_history, batch_rewards)]
+            futures = [executor.submit(self.build_training_set, buf)
+                       for buf in batch_buffers]
             for future in futures:
                 if x is None:
                     x, y = future.result()
@@ -77,7 +77,7 @@ class BaseController:
                     y = np.concatenate((y, targets), axis=0)
         self.model.train_on_batch(x, y)
 
-    def build_training_set(self, history, rewards):
+    def build_training_set(self, buf):
         raise NotImplementedError
 
     def save(self, path):

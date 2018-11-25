@@ -19,6 +19,7 @@ class ControllerType(Enum):
     REINFORCE = 4
     ActorCritic = 5
     A3C = 6
+    PPO = 7
 
 
 class Config:

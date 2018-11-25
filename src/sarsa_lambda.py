@@ -38,20 +38,21 @@ class SarsaLambdaControl(BaseController):
         self.max_workers = config.controller.max_workers
         self.forward = config.controller.forward
 
-    def build_training_set(self, history, rewards):
+    def build_training_set(self, buf):
         if self.forward:
-            return self.build_training_set_forward(history, rewards)
+            return self.build_training_set_forward(buf)
         else:
-            return self.build_training_set_backward(history, rewards)
+            return self.build_training_set_backward(buf)
 
-    def build_training_set_forward(self, history, rewards):
+    def build_training_set_forward(self, buf):
         '''Forward-view Sarsa(𝝀) evaluation
 
         Q(s, a) <- Q(s, a) + 𝜶 * (q_t_𝝀 - Q(s, a))
 
         Args:
-            history = [(s1, a1), (s2, a2), ...,(sT-1, aT-1)]
-            rewards = [r2, r3, ..., rT]
+            buf.states = [s1, s2, ..., sT-1]
+            buf.actions = [a1, a2, ..., aT-1]
+            buf.rewards = [r2, r3, ..., rT]
 
         Return:
             (inputs, targets): 
@@ -59,18 +60,20 @@ class SarsaLambdaControl(BaseController):
                 targets contains lists of action-values for each state in inputs
         '''
         Q = dict()
-        inputs = np.zeros((len(rewards), ) + self.env.observation_space.shape)
-        targets = np.zeros((len(rewards), self.env.action_space.n))
-        for t, ((s, a), r) in enumerate(zip(history, rewards)):
+        inputs = np.zeros((len(buf.rewards), ) +
+                          self.env.observation_space.shape)
+        targets = np.zeros((len(buf.rewards), self.env.action_space.n))
+        history = [(s, a) for s, a in zip(buf.states, buf.actions)]
+        for t, (s, a, r) in enumerate(zip(buf.states, buf.actions, buf.rewards)):
             inputs[t] = np.array(s)
             if tuple(s) not in Q:
                 Q[tuple(s)] = self.model.predict(
                     np.expand_dims(inputs[t], axis=0))
             targets[t] = Q[tuple(s)]
-            targets[t, a] = self.q_lambda(t, rewards, history, Q)
+            targets[t, a] = self.q_lambda(t, buf.rewards, history, Q)
         return inputs, targets
 
-    def build_training_set_backward(self, history, rewards):
+    def build_training_set_backward(self, buf):
         '''Backward-view Sarsa(𝝀) evaluation
 
         Q(s, a) <- Q(s, a) + 𝜶 * (R + 𝜸Q(s', a') - Q(s, a))E_t(s, a)
@@ -78,8 +81,9 @@ class SarsaLambdaControl(BaseController):
         E_t(s, a) = 𝜸𝝀E_t-1(s, a) + 1(S_t = s, A_t = a)
 
         Args:
-            history = [(s1, a1), (s2, a2), ...,(sT-1, aT-1)]
-            rewards = [r2, r3, ..., rT]
+            buf.states = [s1, s2, ..., sT-1]
+            buf.actions = [a1, a2, ..., aT-1]
+            buf.rewards = [r2, r3, ..., rT]
 
         Return:
             (inputs, targets): 
@@ -88,18 +92,19 @@ class SarsaLambdaControl(BaseController):
         '''
         Q = dict()              # store Q-value
         E = defaultdict(int)    # eligibility trace
+        history = [(s, a) for s, a in zip(buf.states, buf.actions)]
         his1 = history.copy()
         his2 = history
         del(his2[0])
         his2.append((0, 0))
 
-        for i, ((s, a), r, (s_, a_)) in enumerate(zip(his1, rewards, his2)):
+        for i, ((s, a), r, (s_, a_)) in enumerate(zip(his1, buf.rewards, his2)):
             s = tuple(s)
             E[(s, a)] += 1
             if s not in Q:
                 Q[s] = self.model.predict(
                     np.expand_dims(np.asarray(s), axis=0))[0]
-            if i + 1 == len(rewards):
+            if i + 1 == len(buf.rewards):
                 td_error = r - Q[s][a]
             else:
                 s_ = tuple(s_)
