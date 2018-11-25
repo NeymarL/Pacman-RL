@@ -1,5 +1,6 @@
 # Proximal Policy Optimization
 # https://arxiv.org/abs/1707.06347
+# https://www.52coding.com.cn/2018/11/25/RL%20-%20PPO/
 
 import gym
 import numpy as np
