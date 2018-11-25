@@ -150,7 +150,7 @@ optional arguments:
 
 ### Proximal Policy Optimization (PPO)
 
-![algo](graph/ppo/ppo_argo.png)
+![algo](graph/ppo/ppo_algo.png)
 
 Run with:
 
