@@ -134,6 +134,7 @@ class PPOActor:
             tf.reduce_mean(tf.minimum(ratio * self.adv_ph, min_adv))
         self.approx_kl = tf.reduce_mean(self.logp_old_ph - logp)
         self.approx_ent = tf.reduce_mean(-logp)
+        self.pi_loss -= 0.01 * self.approx_ent
         self.optimizer = tf.train.AdamOptimizer(self.lr).minimize(self.pi_loss)
 
     def action(self, observation):
@@ -179,7 +180,7 @@ class PPOActor:
         pi_loss_new, kl = self.sess.run(
             [self.pi_loss, self.approx_kl], feed_dict=inputs)
         logger.info(
-            f"\nEpisode {i}:\n\tLoss_pi: {pi_loss_old:.2f}\n\tEntropy: {ent:.2f}\n\t"
+            f"\nEpisode {i}:\n\tLoss_pi: {pi_loss_old:.3e}\n\tEntropy: {ent:.2f}\n\t"
             f"KL: {kl:.2f}\n\tDelta_Loss: {(pi_loss_new - pi_loss_old):.2f}")
 
 
@@ -212,4 +213,4 @@ class PPOCritic:
         for _ in range(self.train_value_iter):
             _, loss = self.sess.run(
                 [self.optimizer, self.v_loss], feed_dict=inputs)
-        print(f"\tLoss_v = {loss:.2f}")
+        print(f"\tLoss_v = {loss:.2e}")

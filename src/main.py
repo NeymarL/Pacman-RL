@@ -121,7 +121,7 @@ def save_plot(indexes, total_rewards, config):
     plt.title('Learning Curve')
     plt.xlabel('Episodes')
     plt.ylabel('Mean Reward')
-    plt.legend(config.controller.controller_type.name, loc='best')
+    plt.legend([config.controller.controller_type.name], loc='best')
     plt.savefig(f"{config.resource.graph_dir}/learn_curve.png")
     logger.info(
         f"Learning curve saved as {config.resource.graph_dir}/learn_curve.png")
