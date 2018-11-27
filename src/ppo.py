@@ -77,20 +77,23 @@ class PPOControl(BaseController):
         batch_rets = []
         batch_advs = []
         batch_logp_old = []
+        total_rewards = []
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             futures = [executor.submit(self.build_training_set, buf)
                        for buf in batch_buffers]
             for future in futures:
-                states, actions, returns, advantages, logps = future.result()
+                states, actions, returns, advantages, logps, r = future.result()
                 batch_states.extend(states)
                 batch_actions.extend(actions)
                 batch_rets.extend(returns)
                 batch_advs.extend(advantages)
                 batch_logp_old.extend(logps)
+                total_rewards.append(r)
 
         if self.raw_pixels:
             self.ac.train(batch_states, batch_actions,
-                          batch_advs, batch_logp_old, batch_rets, i)
+                          batch_advs, batch_logp_old, batch_rets,
+                          np.mean(total_rewards), i)
         else:
             self.actor.train(batch_states, batch_actions,
                              batch_advs, batch_logp_old, i)
@@ -118,7 +121,7 @@ class PPOControl(BaseController):
             states = np.reshape(states, (-1, 90, 90, 4))
         else:
             states = buf.states[:-1]
-        return states, actions[:-1], rewards_to_go[:-1], advs, logps[:-1]
+        return states, actions[:-1], rewards_to_go[:-1], advs, logps[:-1], sum(buf.rewards)
 
     def save(self, path):
         saver = tf.train.Saver()
@@ -314,7 +317,7 @@ class PPOActorCritic:
             [self.pi, self.logp_pi, self.value], feed_dict={self.s_ph: inputs})
         return (my_action, logp), [v]
 
-    def train(self, states, actions, advs, logp_old, rets, i):
+    def train(self, states, actions, advs, logp_old, rets, avg_reward, i):
         '''Update parameters
 
         Args:
@@ -346,7 +349,7 @@ class PPOActorCritic:
         pi_loss_new, v_loss_new, kl = self.sess.run(
             [self.pi_loss, self.v_loss, self.approx_kl], feed_dict=inputs)
         logger.info(
-            f"\nEpisode {i}:\n\tLoss_pi: {pi_loss_old:.3e}\n\tLoss_v: {v_loss_old:.3e}\n\t"
-            f"Entropy: {ent:.2f}\n\tKL: {kl:.2f}\n\t"
+            f"\nEpisode {i}:\n\tAvg Reward:{avg_reward:.2f}\n\tLoss_pi: {pi_loss_old:.3e}\n\t"
+            f"Loss_v: {v_loss_old:.3e}\n\tEntropy: {ent:.2f}\n\tKL: {kl:.2f}\n\t"
             f"Delta_Pi_Loss: {(pi_loss_new - pi_loss_old):.2f}\n\t"
             f"Delta_V_Loss: {(v_loss_new - v_loss_old):.2f}")
