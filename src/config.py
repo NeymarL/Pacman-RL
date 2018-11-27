@@ -69,6 +69,7 @@ class ControllerConfig:
         self.max_workers = 8
         self.lambda_ = 0.5
         self.forward = False
+        self.raw_pixels = False
 
     def __setattr__(self, name, value):
         self.__dict__[name] = value

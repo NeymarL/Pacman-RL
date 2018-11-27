@@ -9,7 +9,7 @@ from logging import getLogger
 from gym.wrappers import Monitor
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from src.util import Buffer
+from src.util import Buffer, preprocess
 from src.config import Config, ControllerType
 from src.montecarlo import MonteCarloControl
 from src.sarsa import SarsaControl
@@ -24,6 +24,8 @@ logger = getLogger(__name__)
 
 def main(config: Config):
     env = gym.make('MsPacman-ram-v0')
+    if config.controller.raw_pixels:
+        env = gym.make('MsPacman-v0')
     if config.render and config.save_replay:
         env = Monitor(env, config.resource.replay_dir, force=True)
 
@@ -134,6 +136,14 @@ def simulation(env, controller, epsilon):
     while not done:
         state = np.expand_dims(observation, axis=0)
         if type(controller) == PPOControl:
+            if controller.raw_pixels:
+                observation = preprocess(observation)
+                state = buf.states[-3:] + [observation]
+                while len(state) < 4:
+                    t = state[0].copy()
+                    state = [t] + state
+                state = np.array(state)
+                state = np.reshape(state, (1, 90, 90, 4))
             (action, logp), v = controller.action(
                 state, return_q=True)
         else:
@@ -181,6 +191,7 @@ def eval(controller, env, config, i):
     total_reward = 0
     qvalues = []
     rewards = []
+    states = []
 
     if config.show_plot:
         plt.show()
@@ -203,9 +214,18 @@ def eval(controller, env, config, i):
             action = controller.action(state)
             Q = 0
         elif config.controller.controller_type == ControllerType.PPO:
+            if controller.raw_pixels:
+                observation = preprocess(observation)
+                state = states[-3:] + [observation]
+                while len(state) < 4:
+                    t = state[0].copy()
+                    state = [t] + state
+                state = np.array(state)
+                state = np.reshape(state, (1, 90, 90, 4))
             (action, _), Q = controller.action(state, return_q=True)
         else:
             action, Q = controller.action(state, predict=True, return_q=True)
+        states.append(observation)
         observation, reward, done, _ = env.step(action)
         total_reward += reward
         rewards.append(reward)

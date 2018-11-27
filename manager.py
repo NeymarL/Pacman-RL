@@ -41,6 +41,8 @@ def create_parser():
     parser.add_argument(
         "--forward", help="set to use forward-view sarsa(lambda)", action="store_true")
     parser.add_argument(
+        "--rawpixels", help="set to use raw pixels as input (only valid to PPO)", action="store_true")
+    parser.add_argument(
         "--max_workers", help="set max workers to train", default=8, type=int)
     parser.add_argument(
         "--t_max", help="set simulate how many timesteps until update param", default=5, type=int)
@@ -78,6 +80,7 @@ def start():
     config.controller.gamma = args.gamma
     config.controller.lambda_ = args.lam
     config.controller.forward = args.forward
+    config.controller.raw_pixels = args.rawpixels
     config.controller.max_workers = args.max_workers
     config.trainer.t_max = args.t_max
     print("===============================================================\n")
