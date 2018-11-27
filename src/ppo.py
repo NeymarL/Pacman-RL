@@ -218,7 +218,7 @@ class PPOActor:
             [self.pi_loss, self.approx_kl], feed_dict=inputs)
         logger.info(
             f"\nEpisode {i}:\n\tLoss_pi: {pi_loss_old:.3e}\n\tEntropy: {ent:.2f}\n\t"
-            f"KL: {kl:.2f}\n\tDelta_Loss: {(pi_loss_new - pi_loss_old):.2f}")
+            f"KL: {kl:.2f}\n\tDelta_Loss: {(pi_loss_new - pi_loss_old):.2e}")
 
 
 class PPOCritic:
@@ -351,5 +351,5 @@ class PPOActorCritic:
         logger.info(
             f"\nEpisode {i}:\n\tAvg Reward:{avg_reward:.2f}\n\tLoss_pi: {pi_loss_old:.3e}\n\t"
             f"Loss_v: {v_loss_old:.3e}\n\tEntropy: {ent:.2f}\n\tKL: {kl:.2f}\n\t"
-            f"Delta_Pi_Loss: {(pi_loss_new - pi_loss_old):.2f}\n\t"
-            f"Delta_V_Loss: {(v_loss_new - v_loss_old):.2f}")
+            f"Delta_Pi_Loss: {(pi_loss_new - pi_loss_old):.2e}\n\t"
+            f"Delta_V_Loss: {(v_loss_new - v_loss_old):.2e}")
