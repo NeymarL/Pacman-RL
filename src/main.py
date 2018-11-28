@@ -138,12 +138,8 @@ def simulation(env, controller, epsilon):
         if type(controller) == PPOControl:
             if controller.raw_pixels:
                 observation = preprocess(observation)
-                state = buf.states[-3:] + [observation]
-                while len(state) < 4:
-                    t = state[0].copy()
-                    state = [t] + state
-                state = np.array(state)
-                state = np.reshape(state, (1, 90, 90, 4))
+                state = np.array(observation)
+                state = np.reshape(state, (1, 90, 90, 1))
             (action, logp), v = controller.action(
                 state, return_q=True)
         else:
@@ -216,12 +212,8 @@ def eval(controller, env, config, i):
         elif config.controller.controller_type == ControllerType.PPO:
             if controller.raw_pixels:
                 observation = preprocess(observation)
-                state = states[-3:] + [observation]
-                while len(state) < 4:
-                    t = state[0].copy()
-                    state = [t] + state
-                state = np.array(state)
-                state = np.reshape(state, (1, 90, 90, 4))
+                state = np.array(observation)
+                state = np.reshape(state, (1, 90, 90, 1))
             (action, _), Q = controller.action(state, return_q=True)
         else:
             action, Q = controller.action(state, predict=True, return_q=True)

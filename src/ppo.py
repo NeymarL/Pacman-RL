@@ -23,7 +23,7 @@ class PPOControl(BaseController):
         self.epsilon = config.controller.epsilon    # clip ratio
         self.gamma = config.controller.gamma
         self.lam = config.controller.lambda_
-        self.pi_lr = config.controller.lr   # 1e-4
+        self.pi_lr = config.trainer.lr   # 1e-4
         self.v_lr = 1e-3
         self.max_workers = config.controller.max_workers
         tfconfig = tf.ConfigProto(
@@ -35,7 +35,7 @@ class PPOControl(BaseController):
         self.sess = tf.Session(config=tfconfig)
         self.raw_pixels = config.controller.raw_pixels
         if self.raw_pixels:
-            state_space = [90, 90, 4]
+            state_space = [90, 90, 1]
         else:
             state_space = self.env.observation_space.shape
         self.actor = PPOActor(self.sess, state_space, self.env.action_space.n,
@@ -97,12 +97,8 @@ class PPOControl(BaseController):
         actions = np.squeeze(buf.actions)
         logps = np.squeeze(buf.logps)
         if self.raw_pixels:
-            init = buf.states[0].copy()
-            states = [[x1, x2, x3, x4] for x1, x2, x3, x4 in zip(
-                [init] * 3 + buf.states[:-4], [init] * 2 + buf.states[:-3],
-                [init] + buf.states[:-2], buf.states[:-1])]
-            states = np.array(states)
-            states = np.reshape(states, (-1, 90, 90, 4))
+            states = np.array(buf.states[:-1])
+            states = np.reshape(states, (-1, 90, 90, 1))
         else:
             states = buf.states[:-1]
         return states, actions[:-1], rewards_to_go[:-1], advs, logps[:-1], sum(buf.rewards)
