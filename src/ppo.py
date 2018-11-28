@@ -35,36 +35,25 @@ class PPOControl(BaseController):
         self.sess = tf.Session(config=tfconfig)
         self.raw_pixels = config.controller.raw_pixels
         if self.raw_pixels:
-            self.ac = PPOActorCritic(self.sess, [90, 90, 4], self.env.action_space.n,
-                                     self.pi_lr, self.epsilon)
+            state_space = [90, 90, 4]
         else:
-            self.actor = PPOActor(self.sess, self.env.observation_space.shape[0],
-                                  self.env.action_space.n, self.pi_lr, self.epsilon)
-            self.critic = PPOCritic(self.sess, self.env.observation_space.shape[0],
-                                    self.v_lr)
+            state_space = self.env.observation_space.shape
+        self.actor = PPOActor(self.sess, state_space, self.env.action_space.n,
+                              self.pi_lr, self.epsilon, self.raw_pixels)
+        self.critic = PPOCritic(self.sess, state_space,
+                                self.v_lr, self.raw_pixels)
         self.build_model()
 
     def build_model(self):
-        if self.raw_pixels:
-            self.ac.build_model()
-        else:
-            self.actor.build_model()
-            self.critic.build_model()
+        self.actor.build_model()
+        self.critic.build_model()
         self.sess.run(tf.global_variables_initializer())
 
     def action(self, observation, predict=False, return_q=False, epsilon=None, return_logp=True):
-        if self.raw_pixels:
-            if return_q:
-                # return a, logp, v
-                return self.ac.action(observation)
-            else:
-                # return a
-                return self.ac.action(observation)[0][0]
-        else:
-            if return_q:
-                v = self.critic.value_of(observation)
-                return self.actor.action(observation), [v]
-            return self.actor.action(observation)[0]
+        if return_q:
+            v = self.critic.value_of(observation)
+            return self.actor.action(observation), [v]
+        return self.actor.action(observation)[0]
 
     def train(self, batch_buffers, i):
         '''Update parameters
@@ -90,14 +79,9 @@ class PPOControl(BaseController):
                 batch_logp_old.extend(logps)
                 total_rewards.append(r)
 
-        if self.raw_pixels:
-            self.ac.train(batch_states, batch_actions,
-                          batch_advs, batch_logp_old, batch_rets,
-                          np.mean(total_rewards), i)
-        else:
-            self.actor.train(batch_states, batch_actions,
-                             batch_advs, batch_logp_old, i)
-            self.critic.train(batch_states, batch_rets, i)
+        self.actor.train(batch_states, batch_actions,
+                         batch_advs, batch_logp_old, np.mean(total_rewards), i)
+        self.critic.train(batch_states, batch_rets, i)
 
     def build_training_set(self, buf):
         rewards_to_go = discount_cumsum(buf.rewards, self.gamma)
@@ -138,24 +122,34 @@ class PPOControl(BaseController):
 
 
 class PPOActor:
-    def __init__(self, sess, n_features, n_actions, lr, epsilon):
+    def __init__(self, sess, n_features, n_actions, lr, epsilon, raw_pixels):
         self.sess = sess
-        self.n_features = n_features
+        if raw_pixels:
+            self.n_features = n_features
+        else:
+            self.n_features = n_features[0]
         self.n_actions = n_actions
         self.lr = lr
         self.epsilon = epsilon
         self.train_policy_iter = 80
         self.target_kl = 0.01
+        self.raw_pixels = raw_pixels
 
     def build_model(self):
         clip_ratio = self.epsilon
         # Input placeholder
-        self.s_ph = tf.placeholder(tf.float32, [None, self.n_features])
+        if self.raw_pixels:
+            self.s_ph = tf.placeholder(tf.float32, [None] + self.n_features)
+        else:
+            self.s_ph = tf.placeholder(tf.float32, [None, self.n_features])
         self.a_ph = tf.placeholder(tf.int32, [None])
         self.logp_old_ph = tf.placeholder(tf.float32, [None])
         self.adv_ph = tf.placeholder(tf.float32, [None])
         # Construct model
-        logits = mlp(self.s_ph, [128, 64, self.n_actions], tf.tanh)
+        if self.raw_pixels:
+            logits = mlp(cnn(self.s_ph), [256, self.n_actions], tf.tanh)
+        else:
+            logits = mlp(self.s_ph, [128, 64, self.n_actions], tf.tanh)
         self.logp_all = tf.nn.log_softmax(logits)
         self.pi = tf.squeeze(tf.multinomial(logits, 1), axis=1)
         self.logp_pi = tf.reduce_sum(tf.one_hot(
@@ -188,7 +182,7 @@ class PPOActor:
             [self.pi, self.logp_pi], feed_dict={self.s_ph: observation})
         return my_action, logp
 
-    def train(self, states, actions, advs, logp_old, i):
+    def train(self, states, actions, advs, logp_old, avg_reward, i):
         '''Update parameters
 
         Args:
@@ -217,23 +211,35 @@ class PPOActor:
         pi_loss_new, kl = self.sess.run(
             [self.pi_loss, self.approx_kl], feed_dict=inputs)
         logger.info(
-            f"\nEpisode {i}:\n\tLoss_pi: {pi_loss_old:.3e}\n\tEntropy: {ent:.2f}\n\t"
-            f"KL: {kl:.2f}\n\tDelta_Loss: {(pi_loss_new - pi_loss_old):.2e}")
+            f"\n\tEpisode {i}:\n\tAvg Reward: {avg_reward:.2f}\n\t"
+            f"Loss_pi: {pi_loss_old:.3e}\n\tEntropy: {ent:.2f}\n\t"
+            f"KL: {kl:.2f}\n\tDelta_Pi_Loss: {(pi_loss_new - pi_loss_old):.2e}")
 
 
 class PPOCritic:
-    def __init__(self, sess, n_features, lr):
+    def __init__(self, sess, n_features, lr, raw_pixels):
         self.sess = sess
+        if raw_pixels:
+            self.n_features = n_features
+        else:
+            self.n_features = n_features[0]
         self.n_features = n_features
         self.lr = lr
         self.model = None
         self.train_value_iter = 80
+        self.raw_pixels = raw_pixels
 
     def build_model(self):
-        self.s_ph = tf.placeholder(tf.float32, [None, self.n_features])
+        if self.raw_pixels:
+            self.s_ph = tf.placeholder(tf.float32, [None] + self.n_features)
+            x = cnn(self.s_ph)
+            hidden_sizes = [256, 1]
+        else:
+            self.s_ph = tf.placeholder(tf.float32, [None, self.n_features])
+            x = self.s_ph
+            hidden_sizes = [64, 64, 1]
         self.ret_ph = tf.placeholder(tf.float32, [None])
-        self.value = tf.squeeze(
-            mlp(self.s_ph, [64, 64, 1], tf.tanh, None), axis=1)
+        self.value = tf.squeeze(mlp(x, hidden_sizes, tf.tanh), axis=1)
         self.v_loss = tf.reduce_mean(
             tf.losses.mean_squared_error(self.ret_ph, self.value))
         self.optimizer = tf.train.AdamOptimizer(self.lr).minimize(self.v_loss)
@@ -251,105 +257,3 @@ class PPOCritic:
             _, loss = self.sess.run(
                 [self.optimizer, self.v_loss], feed_dict=inputs)
         print(f"\tLoss_v = {loss:.2e}")
-
-
-class PPOActorCritic:
-    '''
-    Run PPO with inputs from raw screen pixels
-    A CNN is shared between actor network and critic network
-    '''
-
-    def __init__(self, sess, input_shape, n_actions, lr, epsilon):
-        self.sess = sess
-        self.input_shape = input_shape
-        self.n_actions = n_actions
-        self.lr = lr
-        self.epsilon = epsilon
-        self.train_policy_iter = 80
-        self.target_kl = 0.01
-
-    def build_model(self):
-        clip_ratio = self.epsilon
-        # Input placeholder
-        self.s_ph = tf.placeholder(tf.float32, [None] + self.input_shape)
-        self.a_ph = tf.placeholder(tf.int32, [None])
-        self.logp_old_ph = tf.placeholder(tf.float32, [None])
-        self.adv_ph = tf.placeholder(tf.float32, [None])
-        self.ret_ph = tf.placeholder(tf.float32, [None])
-        # Construct model
-        x = cnn(self.s_ph)
-        # policy head
-        logits = mlp(x, [256, self.n_actions], tf.tanh)
-        self.logp_all = tf.nn.log_softmax(logits)
-        self.pi = tf.squeeze(tf.multinomial(logits, 1), axis=1)
-        self.logp_pi = tf.reduce_sum(tf.one_hot(
-            self.pi, depth=self.n_actions) * self.logp_all, axis=1)
-        logp = tf.reduce_sum(tf.one_hot(
-            self.a_ph, depth=self.n_actions) * self.logp_all, axis=1)
-        # PPO objectives
-        # pi(a|s) / pi_old(a|s)
-        ratio = tf.exp(logp - self.logp_old_ph)
-        min_adv = tf.where(self.adv_ph > 0, (1+clip_ratio)
-                           * self.adv_ph, (1-clip_ratio)*self.adv_ph)
-        self.pi_loss = - \
-            tf.reduce_mean(tf.minimum(ratio * self.adv_ph, min_adv))
-        self.approx_kl = tf.reduce_mean(self.logp_old_ph - logp)
-        self.approx_ent = tf.reduce_mean(-logp)
-        self.pi_loss -= 0.01 * self.approx_ent
-        # value head
-        self.value = tf.squeeze(mlp(x, [128, 1], tf.tanh), axis=1)
-        self.v_loss = tf.reduce_mean(
-            tf.losses.mean_squared_error(self.ret_ph, self.value))
-        self.optimizer = tf.train.AdamOptimizer(
-            self.lr).minimize(self.pi_loss + self.v_loss)
-
-    def action(self, inputs):
-        '''
-        Choose an action according to approximated softmax policy.
-
-        Args:
-            inputs: stack of observations from the environment (usually 4 frame)
-
-        Return:
-            The action choosed according to the policy
-        '''
-        my_action, logp, v = self.sess.run(
-            [self.pi, self.logp_pi, self.value], feed_dict={self.s_ph: inputs})
-        return (my_action, logp), [v]
-
-    def train(self, states, actions, advs, logp_old, rets, avg_reward, i):
-        '''Update parameters
-
-        Args:
-            states = [s1, s2, ..., sn]
-            actions = [a1, a2, ..., an]
-            advs = [adv1, adv2, ..., advn]
-            logp_old = [logp1, logp2, ..., logpn]
-            rets = [ret1, ret2, ..., retn]
-            i: episode number
-        '''
-        inputs = {
-            self.s_ph: states,
-            self.a_ph: actions,
-            self.adv_ph: advs,
-            self.logp_old_ph: logp_old,
-            self.ret_ph: rets
-        }
-        pi_loss_old, v_loss_old, ent = self.sess.run(
-            [self.pi_loss, self.v_loss, self.approx_ent], feed_dict=inputs)
-        # train policy and value
-        for j in range(self.train_policy_iter):
-            _, kl = self.sess.run(
-                [self.optimizer, self.approx_kl], feed_dict=inputs)
-            kl = kl.mean()
-            if kl > 1.5 * self.target_kl:
-                logger.info(
-                    'Early stopping at step %d due to reaching max kl.' % j)
-                break
-        pi_loss_new, v_loss_new, kl = self.sess.run(
-            [self.pi_loss, self.v_loss, self.approx_kl], feed_dict=inputs)
-        logger.info(
-            f"\nEpisode {i}:\n\tAvg Reward:{avg_reward:.2f}\n\tLoss_pi: {pi_loss_old:.3e}\n\t"
-            f"Loss_v: {v_loss_old:.3e}\n\tEntropy: {ent:.2f}\n\tKL: {kl:.2f}\n\t"
-            f"Delta_Pi_Loss: {(pi_loss_new - pi_loss_old):.2e}\n\t"
-            f"Delta_V_Loss: {(v_loss_new - v_loss_old):.2e}")
