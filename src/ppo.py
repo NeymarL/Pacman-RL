@@ -23,7 +23,7 @@ class PPOControl(BaseController):
         self.epsilon = config.controller.epsilon    # clip ratio
         self.gamma = config.controller.gamma
         self.lam = config.controller.lambda_
-        self.pi_lr = 3e-4
+        self.pi_lr = config.controller.lr   # 1e-4
         self.v_lr = 1e-3
         self.max_workers = config.controller.max_workers
         tfconfig = tf.ConfigProto(
@@ -211,7 +211,7 @@ class PPOActor:
         pi_loss_new, kl = self.sess.run(
             [self.pi_loss, self.approx_kl], feed_dict=inputs)
         logger.info(
-            f"\n\tEpisode {i}:\n\tAvg Reward: {avg_reward:.2f}\n\t"
+            f"\n\tEpisode: {i}\n\tAvg Reward: {avg_reward:.2f}\n\t"
             f"Loss_pi: {pi_loss_old:.3e}\n\tEntropy: {ent:.2f}\n\t"
             f"KL: {kl:.2f}\n\tDelta_Pi_Loss: {(pi_loss_new - pi_loss_old):.2e}")
 
