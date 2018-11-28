@@ -142,10 +142,11 @@ class PPOActor:
         self.logp_old_ph = tf.placeholder(tf.float32, [None])
         self.adv_ph = tf.placeholder(tf.float32, [None])
         # Construct model
-        if self.raw_pixels:
-            logits = mlp(cnn(self.s_ph), [256, self.n_actions], tf.tanh)
-        else:
-            logits = mlp(self.s_ph, [128, 64, self.n_actions], tf.tanh)
+        with tf.variable_scope('pi'):
+            if self.raw_pixels:
+                logits = mlp(cnn(self.s_ph), [256, self.n_actions], tf.tanh)
+            else:
+                logits = mlp(self.s_ph, [128, 64, self.n_actions], tf.tanh)
         self.logp_all = tf.nn.log_softmax(logits)
         self.pi = tf.squeeze(tf.multinomial(logits, 1), axis=1)
         self.logp_pi = tf.reduce_sum(tf.one_hot(
@@ -226,14 +227,16 @@ class PPOCritic:
         self.raw_pixels = raw_pixels
 
     def build_model(self):
-        if self.raw_pixels:
-            self.s_ph = tf.placeholder(tf.float32, [None] + self.n_features)
-            x = cnn(self.s_ph)
-            hidden_sizes = [256, 1]
-        else:
-            self.s_ph = tf.placeholder(tf.float32, [None, self.n_features])
-            x = self.s_ph
-            hidden_sizes = [64, 64, 1]
+        with tf.variable_scope('v'):
+            if self.raw_pixels:
+                self.s_ph = tf.placeholder(
+                    tf.float32, [None] + self.n_features)
+                x = cnn(self.s_ph)
+                hidden_sizes = [256, 1]
+            else:
+                self.s_ph = tf.placeholder(tf.float32, [None, self.n_features])
+                x = self.s_ph
+                hidden_sizes = [64, 64, 1]
         self.ret_ph = tf.placeholder(tf.float32, [None])
         self.value = tf.squeeze(mlp(x, hidden_sizes, tf.tanh), axis=1)
         self.v_loss = tf.reduce_mean(
