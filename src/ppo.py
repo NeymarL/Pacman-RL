@@ -35,7 +35,7 @@ class PPOControl(BaseController):
         self.sess = tf.Session(config=tfconfig)
         self.raw_pixels = config.controller.raw_pixels
         if self.raw_pixels:
-            state_space = [90, 90, 1]
+            state_space = [84, 84, 2]
         else:
             state_space = self.env.observation_space.shape
         self.actor = PPOActor(self.sess, state_space, self.env.action_space.n,
@@ -98,7 +98,7 @@ class PPOControl(BaseController):
         logps = np.squeeze(buf.logps)
         if self.raw_pixels:
             states = np.array(buf.states[:-1])
-            states = np.reshape(states, (-1, 90, 90, 1))
+            states = np.reshape(states, (-1, 84, 84, 2))
         else:
             states = buf.states[:-1]
         return states, actions[:-1], rewards_to_go[:-1], advs, logps[:-1], sum(buf.rewards)

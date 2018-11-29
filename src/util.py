@@ -1,6 +1,7 @@
 import scipy.signal
 import tensorflow as tf
 import numpy as np
+import cv2
 
 
 def discount_cumsum(x, discount):
@@ -33,13 +34,21 @@ def preprocess(img):
         exit(1)
     # gray scale
     gray = np.dot(img[..., :3], [0.299, 0.587, 0.114])
-    # padding to (230, 180)
-    img = np.pad(gray, 10, mode='edge')
-    # downsampling to (115, 90)
-    img = img[::2, ::2]
-    # crop to (90, 90)
-    img = img[6:96][:]
-    return img
+    # Canny edge
+    canny = cv2.Canny(gray.astype('uint8'), 50, 200)
+
+    def downsampling(img):
+        # padding to (218, 168)
+        img = np.pad(img, 4, mode='edge')
+        # downsampling to (109, 84)
+        img = img[::2, ::2]
+        # crop to (84, 84)
+        img = img[3:87][:]
+        return img
+    top = downsampling(gray)
+    down = downsampling(canny)
+    img = np.concatenate((top, down))
+    return np.reshape(img, (84, 84, 2))
 
 
 def mlp(x, hidden_sizes, activation=tf.tanh, output_activation=None):
@@ -49,10 +58,10 @@ def mlp(x, hidden_sizes, activation=tf.tanh, output_activation=None):
 
 
 def cnn(x):
-    # (90, 90, 4) -> (21, 21, 16)
+    # (90, 90, 4) -> (20, 20, 16)
     x = tf.layers.conv2d(x, 16, [8, 8], [4, 4], activation=tf.nn.relu)
-    # (21, 21, 16) -> (8, 8, 32)
-    x = tf.layers.conv2d(x, 32, [6, 6], [2, 2], activation=tf.nn.relu)
+    # (20, 20, 16) -> (8, 8, 32)
+    x = tf.layers.conv2d(x, 32, [5, 5], [2, 2], activation=tf.nn.relu)
     # (8, 8, 32) -> (2048)
     x = tf.layers.flatten(x)
     return x

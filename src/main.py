@@ -139,7 +139,7 @@ def simulation(env, controller, epsilon):
             if controller.raw_pixels:
                 observation = preprocess(observation)
                 state = np.array(observation)
-                state = np.reshape(state, (1, 90, 90, 1))
+                state = np.reshape(state, (1, 84, 84, 2))
             (action, logp), v = controller.action(
                 state, return_q=True)
         else:
@@ -213,7 +213,7 @@ def eval(controller, env, config, i):
             if controller.raw_pixels:
                 observation = preprocess(observation)
                 state = np.array(observation)
-                state = np.reshape(state, (1, 90, 90, 1))
+                state = np.reshape(state, (1, 84, 84, 2))
             (action, _), Q = controller.action(state, return_q=True)
         else:
             action, Q = controller.action(state, predict=True, return_q=True)
