@@ -113,8 +113,8 @@ class PPOControl(BaseController):
             saver = tf.train.Saver()
             saver.restore(self.sess, path)
             logger.info(f"Load weight from {path}")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(e)
 
 
 class PPOActor:
