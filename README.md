@@ -53,6 +53,7 @@ optional arguments:
   --gamma GAMMA         set reward decay rate
   --lam LAM             set lambda if use sarsa(lambda) algorithm
   --forward             set to use forward-view sarsa(lambda)
+  --rawpixels           set to use raw pixels as input (only valid to PPO)
   --max_workers MAX_WORKERS
                         set max workers to train
   --t_max T_MAX         set simulate how many timesteps until update param
