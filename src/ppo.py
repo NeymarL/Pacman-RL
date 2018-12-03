@@ -220,7 +220,6 @@ class PPOCritic:
             self.n_features = n_features
         else:
             self.n_features = n_features[0]
-        self.n_features = n_features
         self.lr = lr
         self.model = None
         self.train_value_iter = 80
